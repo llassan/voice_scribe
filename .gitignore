@@ -1,0 +1,9 @@
+.gradle/
+build/
+local.properties
+.idea/
+.DS_Store
+*.iml
+.cxx/
+# Vendored whisper.cpp source — restore with: scripts/fetch-whisper.sh
+third_party/whisper.cpp/

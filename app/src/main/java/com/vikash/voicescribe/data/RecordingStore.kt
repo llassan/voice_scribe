@@ -1,0 +1,98 @@
+package com.vikash.voicescribe.data
+
+import android.content.Context
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import org.json.JSONArray
+import org.json.JSONObject
+import java.io.File
+import java.util.UUID
+
+enum class TranscriptStatus { NONE, NEEDS_MODEL, QUEUED, TRANSCRIBING, DONE, ERROR }
+
+data class Recording(
+    val id: String,
+    val title: String,
+    val createdAt: Long,
+    val durationMs: Long,
+    val wavPath: String,
+    val transcript: String? = null,
+    val summary: List<String> = emptyList(),
+    val language: String? = null,
+    val status: TranscriptStatus = TranscriptStatus.NONE,
+    val error: String? = null,
+)
+
+/**
+ * File-backed store: recordings/<id>.wav + <id>.json under filesDir.
+ * All mutations are synchronized and mirrored into [recordings] for the UI.
+ */
+class RecordingStore(context: Context) {
+    private val dir = File(context.filesDir, "recordings").apply { mkdirs() }
+
+    private val _recordings = MutableStateFlow<List<Recording>>(emptyList())
+    val recordings: StateFlow<List<Recording>> = _recordings
+
+    init {
+        _recordings.value = dir.listFiles { f -> f.extension == "json" }
+            ?.mapNotNull { runCatching { fromJson(it.readText()) }.getOrNull() }
+            ?.sortedByDescending { it.createdAt }
+            ?: emptyList()
+    }
+
+    fun newId(): String = UUID.randomUUID().toString()
+
+    fun wavFileFor(id: String): File = File(dir, "$id.wav")
+
+    fun get(id: String): Recording? = _recordings.value.find { it.id == id }
+
+    @Synchronized
+    fun upsert(recording: Recording) {
+        File(dir, "${recording.id}.json").writeText(toJson(recording))
+        _recordings.value = (_recordings.value.filter { it.id != recording.id } + recording)
+            .sortedByDescending { it.createdAt }
+    }
+
+    @Synchronized
+    fun delete(id: String) {
+        File(dir, "$id.json").delete()
+        wavFileFor(id).delete()
+        _recordings.value = _recordings.value.filter { it.id != id }
+    }
+
+    private fun toJson(r: Recording): String = JSONObject().apply {
+        put("id", r.id)
+        put("title", r.title)
+        put("createdAt", r.createdAt)
+        put("durationMs", r.durationMs)
+        put("wavPath", r.wavPath)
+        put("transcript", r.transcript ?: JSONObject.NULL)
+        put("summary", JSONArray(r.summary))
+        put("language", r.language ?: JSONObject.NULL)
+        put("status", r.status.name)
+        put("error", r.error ?: JSONObject.NULL)
+    }.toString()
+
+    private fun fromJson(text: String): Recording {
+        val o = JSONObject(text)
+        val summary = o.optJSONArray("summary")?.let { arr ->
+            List(arr.length()) { arr.getString(it) }
+        } ?: emptyList()
+        // A recording persisted mid-transcription means the process died: mark it retryable.
+        val status = TranscriptStatus.valueOf(o.optString("status", "NONE")).let {
+            if (it == TranscriptStatus.QUEUED || it == TranscriptStatus.TRANSCRIBING) TranscriptStatus.NEEDS_MODEL else it
+        }
+        return Recording(
+            id = o.getString("id"),
+            title = o.getString("title"),
+            createdAt = o.getLong("createdAt"),
+            durationMs = o.getLong("durationMs"),
+            wavPath = o.getString("wavPath"),
+            transcript = if (o.isNull("transcript")) null else o.getString("transcript"),
+            summary = summary,
+            language = if (o.isNull("language")) null else o.getString("language"),
+            status = status,
+            error = if (o.isNull("error")) null else o.getString("error"),
+        )
+    }
+}
