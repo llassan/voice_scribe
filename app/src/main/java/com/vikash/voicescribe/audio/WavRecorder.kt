@@ -4,6 +4,8 @@ import android.annotation.SuppressLint
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
+import android.media.audiofx.AcousticEchoCanceler
+import android.media.audiofx.NoiseSuppressor
 import java.io.BufferedOutputStream
 import java.io.File
 import java.io.FileOutputStream
@@ -14,9 +16,19 @@ import kotlin.math.abs
 
 const val SAMPLE_RATE = 16_000
 
-/** Records mono 16 kHz PCM16 straight into a WAV file — whisper's native input format. */
+/**
+ * Records mono 16 kHz PCM16 straight into a WAV file — whisper's native input format.
+ *
+ * Uses the plain MIC source: VOICE_RECOGNITION sounds attractive for speech-to-text
+ * but proved unreliable across systems (dead silence on some, a constant tone on
+ * others), and a broken recording is the one failure a recorder can never have.
+ * Speech cleanup comes from the platform NoiseSuppressor/AEC effects instead,
+ * where the device supports them.
+ */
 class WavRecorder {
     private var record: AudioRecord? = null
+    private var noiseSuppressor: NoiseSuppressor? = null
+    private var echoCanceler: AcousticEchoCanceler? = null
     private var thread: Thread? = null
     @Volatile private var running = false
     @Volatile private var dataBytes = 0L
@@ -35,6 +47,19 @@ class WavRecorder {
         )
         check(rec.state == AudioRecord.STATE_INITIALIZED) { "Microphone unavailable" }
         record = rec
+
+        // Hardware speech cleanup where the device offers it; skipped elsewhere.
+        if (NoiseSuppressor.isAvailable()) {
+            noiseSuppressor = runCatching {
+                NoiseSuppressor.create(rec.audioSessionId)?.also { it.enabled = true }
+            }.getOrNull()
+        }
+        if (AcousticEchoCanceler.isAvailable()) {
+            echoCanceler = runCatching {
+                AcousticEchoCanceler.create(rec.audioSessionId)?.also { it.enabled = true }
+            }.getOrNull()
+        }
+
         running = true
         dataBytes = 0
 
@@ -68,6 +93,10 @@ class WavRecorder {
         running = false
         thread?.join()
         thread = null
+        noiseSuppressor?.release()
+        noiseSuppressor = null
+        echoCanceler?.release()
+        echoCanceler = null
         record?.release()
         record = null
         return durationMs
