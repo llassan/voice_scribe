@@ -73,7 +73,12 @@ object TranscriptExporter {
         }
         blocks += Block("Transcript", paint(14f, bold = true), 8)
         if (rec.segments.isNotEmpty()) {
+            var lastSpeaker: Int? = null
             rec.segments.forEach {
+                if (it.speaker != null && it.speaker != lastSpeaker) {
+                    blocks += Block("Speaker ${it.speaker + 1}", paint(11f, bold = true), 4)
+                    lastSpeaker = it.speaker
+                }
                 blocks += Block("${formatStamp(it.t0Ms)}  ${it.text}", paint(11f), 6)
             }
         } else {
@@ -180,7 +185,14 @@ object TranscriptExporter {
         }
         body.append(para("Transcript", halfPtSize = 28, bold = true))
         if (rec.segments.isNotEmpty()) {
-            rec.segments.forEach { body.append(para("${formatStamp(it.t0Ms)}  ${it.text}")) }
+            var lastSpeaker: Int? = null
+            rec.segments.forEach {
+                if (it.speaker != null && it.speaker != lastSpeaker) {
+                    body.append(para("Speaker ${it.speaker + 1}", bold = true))
+                    lastSpeaker = it.speaker
+                }
+                body.append(para("${formatStamp(it.t0Ms)}  ${it.text}"))
+            }
         } else {
             body.append(para(rec.transcript.orEmpty()))
         }

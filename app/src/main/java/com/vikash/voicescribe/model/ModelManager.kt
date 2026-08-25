@@ -16,6 +16,12 @@ data class WhisperModel(
     val fileName: String,
     val sizeMB: Int,
     val description: String,
+    /** tinydiarize model: emits speaker-turn markers during transcription. */
+    val diarize: Boolean = false,
+    /** Requires the one-time Pro unlock to download. */
+    val pro: Boolean = false,
+    /** Full download URL when the model isn't hosted in the default repo. */
+    val url: String? = null,
 )
 
 sealed class DownloadState {
@@ -45,6 +51,15 @@ class ModelManager(private val context: Context) {
             WhisperModel(
                 "small-q5_1", "Accurate (Small)", "ggml-small-q5_1.bin", 190,
                 "Best accuracy. Needs a recent phone with 6 GB+ RAM."
+            ),
+            WhisperModel(
+                "small-en-tdrz", "Speakers (Small)", "ggml-small.en-tdrz.bin", 465,
+                "Labels who's speaking in meetings and interviews. English only. Needs 6 GB+ RAM.",
+                diarize = true,
+                pro = true,
+                // tinydiarize models live in the author's repo (whisper.cpp's own
+                // download script points there too)
+                url = "https://huggingface.co/akashmjn/tinydiarize-whisper.cpp/resolve/main/ggml-small.en-tdrz.bin",
             ),
         )
     }
@@ -92,7 +107,7 @@ class ModelManager(private val context: Context) {
         val part = File(modelsDir, model.fileName + ".part")
         _downloadState.value = DownloadState.Downloading(model.id, 0f)
         try {
-            val conn = URL(BASE_URL + model.fileName).openConnection() as HttpURLConnection
+            val conn = URL(model.url ?: (BASE_URL + model.fileName)).openConnection() as HttpURLConnection
             conn.instanceFollowRedirects = true
             conn.connectTimeout = 15_000
             conn.readTimeout = 30_000

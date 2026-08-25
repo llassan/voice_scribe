@@ -25,7 +25,7 @@ class App : Application() {
         super.onCreate()
         store = RecordingStore(this)
         models = ModelManager(this)
-        engine = TranscriptionEngine(store, models, appScope)
+        engine = TranscriptionEngine(this, store, models, appScope)
         billing = BillingManager(this)
     }
 }

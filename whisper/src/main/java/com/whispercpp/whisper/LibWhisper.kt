@@ -10,7 +10,13 @@ import java.util.concurrent.Executors
 
 private const val LOG_TAG = "LibWhisper"
 
-data class WhisperSegment(val t0Ms: Long, val t1Ms: Long, val text: String)
+data class WhisperSegment(
+    val t0Ms: Long,
+    val t1Ms: Long,
+    val text: String,
+    /** True when a tinydiarize model detected a speaker change after this segment. */
+    val speakerTurnNext: Boolean = false,
+)
 
 class WhisperContext private constructor(private var ptr: Long) {
     // Meet Whisper C++ constraint: Don't access from more than one thread at a time.
@@ -21,12 +27,13 @@ class WhisperContext private constructor(private var ptr: Long) {
     suspend fun transcribeData(
         data: FloatArray,
         language: String = "auto",
-        printTimestamp: Boolean = true
+        printTimestamp: Boolean = true,
+        enableDiarization: Boolean = false,
     ): String = withContext(scope.coroutineContext) {
         require(ptr != 0L)
         val numThreads = WhisperCpuConfig.preferredThreadCount
         Log.d(LOG_TAG, "Selecting $numThreads threads")
-        WhisperLib.fullTranscribe(ptr, numThreads, data, language)
+        WhisperLib.fullTranscribe(ptr, numThreads, data, language, enableDiarization)
         val textCount = WhisperLib.getTextSegmentCount(ptr)
         return@withContext buildString {
             for (i in 0 until textCount) {
@@ -50,6 +57,7 @@ class WhisperContext private constructor(private var ptr: Long) {
                 t0Ms = WhisperLib.getTextSegmentT0(ptr, i) * 10, // whisper units are 10 ms
                 t1Ms = WhisperLib.getTextSegmentT1(ptr, i) * 10,
                 text = WhisperLib.getTextSegment(ptr, i).trim(),
+                speakerTurnNext = WhisperLib.getSegmentSpeakerTurnNext(ptr, i),
             )
         }
     }
@@ -158,8 +166,9 @@ private class WhisperLib {
         external fun initContextFromAsset(assetManager: AssetManager, assetPath: String): Long
         external fun initContext(modelPath: String): Long
         external fun freeContext(contextPtr: Long)
-        external fun fullTranscribe(contextPtr: Long, numThreads: Int, audioData: FloatArray, language: String)
+        external fun fullTranscribe(contextPtr: Long, numThreads: Int, audioData: FloatArray, language: String, tdrzEnable: Boolean)
         external fun getDetectedLanguage(contextPtr: Long): String
+        external fun getSegmentSpeakerTurnNext(contextPtr: Long, index: Int): Boolean
         external fun getTextSegmentCount(contextPtr: Long): Int
         external fun getTextSegment(contextPtr: Long, index: Int): String
         external fun getTextSegmentT0(contextPtr: Long, index: Int): Long

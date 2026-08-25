@@ -164,7 +164,7 @@ Java_com_whispercpp_whisper_WhisperLib_00024Companion_freeContext(
 JNIEXPORT void JNICALL
 Java_com_whispercpp_whisper_WhisperLib_00024Companion_fullTranscribe(
         JNIEnv *env, jobject thiz, jlong context_ptr, jint num_threads, jfloatArray audio_data,
-        jstring language_str) {
+        jstring language_str, jboolean tdrz_enable) {
     UNUSED(thiz);
     struct whisper_context *context = (struct whisper_context *) context_ptr;
     jfloat *audio_data_arr = (*env)->GetFloatArrayElements(env, audio_data, NULL);
@@ -179,6 +179,7 @@ Java_com_whispercpp_whisper_WhisperLib_00024Companion_fullTranscribe(
     params.print_special = false;
     params.translate = false;
     params.language = language_chars; // "auto" enables whisper language detection
+    params.tdrz_enable = tdrz_enable; // tinydiarize speaker-turn detection (tdrz models only)
     params.n_threads = num_threads;
     params.offset_ms = 0;
     params.no_context = true;
@@ -194,6 +195,15 @@ Java_com_whispercpp_whisper_WhisperLib_00024Companion_fullTranscribe(
     }
     (*env)->ReleaseFloatArrayElements(env, audio_data, audio_data_arr, JNI_ABORT);
     (*env)->ReleaseStringUTFChars(env, language_str, language_chars);
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_whispercpp_whisper_WhisperLib_00024Companion_getSegmentSpeakerTurnNext(
+        JNIEnv *env, jobject thiz, jlong context_ptr, jint index) {
+    UNUSED(env);
+    UNUSED(thiz);
+    struct whisper_context *context = (struct whisper_context *) context_ptr;
+    return whisper_full_get_segment_speaker_turn_next(context, index);
 }
 
 JNIEXPORT jstring JNICALL

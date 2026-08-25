@@ -505,6 +505,16 @@ private fun TranscriptBody(rec: Recording, player: AudioPlayer?, scrollState: Sc
     }
 
     rec.segments.forEachIndexed { index, seg ->
+        val prevSpeaker = rec.segments.getOrNull(index - 1)?.speaker
+        if (seg.speaker != null && seg.speaker != prevSpeaker) {
+            Text(
+                "Speaker ${seg.speaker + 1}",
+                style = MaterialTheme.typography.labelLarge,
+                color = if (seg.speaker % 2 == 0) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.secondary,
+                modifier = Modifier.padding(start = 6.dp, top = 12.dp, bottom = 2.dp),
+            )
+        }
         val active = index == activeIndex
         Row(
             Modifier

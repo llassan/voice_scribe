@@ -47,8 +47,14 @@ fun ModelsScreen(app: App, onBack: () -> Unit) {
     val scope = rememberCoroutineScope()
     val downloadState by app.models.downloadState.collectAsState()
     val installed by app.models.installedIds.collectAsState()
+    val isPro by app.billing.isPro.collectAsState()
     var selected by remember { mutableStateOf(app.models.selectedId) }
+    var paywall by remember { mutableStateOf(false) }
     val recommended = app.models.recommended()
+
+    if (paywall) {
+        PaywallDialog(billing = app.billing, onDismiss = { paywall = false })
+    }
 
     Scaffold(
         topBar = {
@@ -81,16 +87,21 @@ fun ModelsScreen(app: App, onBack: () -> Unit) {
                     isInstalled = model.id in installed,
                     isSelected = selected == model.id,
                     isRecommended = model.id == recommended.id,
+                    isLocked = model.pro && !isPro,
                     downloadState = downloadState,
                     onSelect = {
                         selected = model.id
                         app.models.selectedId = model.id
                     },
                     onDownload = {
-                        scope.launch {
-                            if (app.models.download(model)) {
-                                selected = model.id
-                                app.engine.retryPending()
+                        if (model.pro && !isPro) {
+                            paywall = true
+                        } else {
+                            scope.launch {
+                                if (app.models.download(model)) {
+                                    selected = model.id
+                                    app.engine.retryPending()
+                                }
                             }
                         }
                     },
@@ -107,6 +118,7 @@ private fun ModelCard(
     isInstalled: Boolean,
     isSelected: Boolean,
     isRecommended: Boolean,
+    isLocked: Boolean,
     downloadState: DownloadState,
     onSelect: () -> Unit,
     onDownload: () -> Unit,
@@ -125,6 +137,14 @@ private fun ModelCard(
                 Column(Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(model.label, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                        if (model.pro) {
+                            Text(
+                                "  PRO",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.secondary,
+                            )
+                        }
                         if (isRecommended) {
                             Text(
                                 "  · recommended for this phone",
@@ -166,7 +186,13 @@ private fun ModelCard(
                         )
                     }
                     Button(onClick = onDownload, enabled = !anyDownloading) {
-                        Text(if (failedThis) "Retry download" else "Download")
+                        Text(
+                            when {
+                                isLocked -> "Unlock to download"
+                                failedThis -> "Retry download"
+                                else -> "Download"
+                            }
+                        )
                     }
                 }
             }

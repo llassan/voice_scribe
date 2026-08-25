@@ -10,7 +10,13 @@ import java.util.UUID
 
 enum class TranscriptStatus { NONE, NEEDS_MODEL, QUEUED, TRANSCRIBING, DONE, ERROR }
 
-data class Segment(val t0Ms: Long, val t1Ms: Long, val text: String)
+data class Segment(
+    val t0Ms: Long,
+    val t1Ms: Long,
+    val text: String,
+    /** 0-based speaker index from diarization; null when no speaker data. */
+    val speaker: Int? = null,
+)
 
 data class Recording(
     val id: String,
@@ -81,6 +87,7 @@ class RecordingStore(context: Context) {
                 put("t0", s.t0Ms)
                 put("t1", s.t1Ms)
                 put("text", s.text)
+                put("speaker", s.speaker ?: JSONObject.NULL)
             }
         }))
         put("summary", JSONArray(r.summary))
@@ -97,7 +104,10 @@ class RecordingStore(context: Context) {
         val segments = o.optJSONArray("segments")?.let { arr ->
             List(arr.length()) { i ->
                 val s = arr.getJSONObject(i)
-                Segment(s.getLong("t0"), s.getLong("t1"), s.getString("text"))
+                Segment(
+                    s.getLong("t0"), s.getLong("t1"), s.getString("text"),
+                    speaker = if (s.isNull("speaker")) null else s.getInt("speaker"),
+                )
             }
         } ?: emptyList()
         // A recording persisted mid-transcription means the process died: mark it retryable.

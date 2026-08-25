@@ -51,6 +51,7 @@ fun PaywallDialog(
             Column {
                 PaywallPoint("Export transcripts as PDF")
                 PaywallPoint("Export transcripts as Word (.docx)")
+                PaywallPoint("Speaker labels for meetings & interviews")
                 PaywallPoint("All future Pro features included")
                 Spacer(Modifier.height(10.dp))
                 Text(

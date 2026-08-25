@@ -1,5 +1,6 @@
 package com.vikash.voicescribe.transcribe
 
+import android.content.Context
 import android.util.Log
 import com.vikash.voicescribe.audio.decodeAudioToMono16k
 import com.vikash.voicescribe.audio.transcodeWavToM4a
@@ -8,12 +9,14 @@ import com.vikash.voicescribe.data.RecordingStore
 import com.vikash.voicescribe.data.Segment
 import com.vikash.voicescribe.data.TranscriptStatus
 import com.vikash.voicescribe.model.ModelManager
+import com.vikash.voicescribe.service.TranscribeService
 import com.vikash.voicescribe.summarize.Summarizer
 import com.whispercpp.whisper.WhisperContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import java.io.File
+import java.util.concurrent.atomic.AtomicInteger
 
 private const val TAG = "TranscriptionEngine"
 
@@ -23,23 +26,36 @@ private const val TAG = "TranscriptionEngine"
  * reloaded only when the selected model file changes.
  */
 class TranscriptionEngine(
+    private val context: Context,
     private val store: RecordingStore,
     private val models: ModelManager,
     scope: CoroutineScope,
 ) {
     private val queue = Channel<String>(Channel.UNLIMITED)
+    private val pending = AtomicInteger(0)
     private var whisper: WhisperContext? = null
     private var loadedModelPath: String? = null
 
     init {
         scope.launch {
-            for (id in queue) processOne(id)
+            for (id in queue) {
+                try {
+                    processOne(id)
+                } finally {
+                    // Drop the foreground anchor once the queue drains.
+                    if (pending.decrementAndGet() == 0) TranscribeService.stop(context)
+                }
+            }
         }
     }
 
     fun enqueue(id: String) {
         val rec = store.get(id) ?: return
         store.upsert(rec.copy(status = TranscriptStatus.QUEUED, error = null))
+        // Foreground service keeps long transcriptions alive when the app is backgrounded.
+        if (pending.incrementAndGet() == 1) {
+            runCatching { TranscribeService.start(context) }
+        }
         queue.trySend(id)
     }
 
@@ -61,11 +77,26 @@ class TranscriptionEngine(
             store.upsert(rec.copy(status = TranscriptStatus.TRANSCRIBING))
             val ctx = loadContext(modelFile)
             val samples = decodeAudioToMono16k(File(rec.audioPath))
-            val text = ctx.transcribeData(samples, language = "auto", printTimestamp = false)
-                .trim()
-            val segments = ctx.segments()
-                .filter { it.text.isNotBlank() }
-                .map { Segment(it.t0Ms, it.t1Ms, it.text) }
+            val diarize = modelFile.name.contains("tdrz")
+            // .en models reject other languages; multilingual models auto-detect.
+            val forcedLanguage = if (modelFile.name.contains(".en")) "en" else "auto"
+            val text = ctx.transcribeData(
+                samples, language = forcedLanguage, printTimestamp = false, enableDiarization = diarize
+            ).trim()
+            val raw = ctx.segments().filter { it.text.isNotBlank() }
+            // tinydiarize marks turn boundaries, not voice identity, so alternate
+            // between two speakers — correct for the dominant 1:1 meeting/interview
+            // case, and far less misleading than "Speaker 7" in a dialog.
+            val anyTurns = diarize && raw.any { it.speakerTurnNext }
+            var turnCount = 0
+            val segments = raw.map { s ->
+                val seg = Segment(
+                    s.t0Ms, s.t1Ms, s.text,
+                    speaker = if (anyTurns) turnCount % 2 else null,
+                )
+                if (s.speakerTurnNext) turnCount++
+                seg
+            }
             val language = runCatching { ctx.detectedLanguage() }.getOrDefault("")
             val summary = Summarizer.summarize(text)
             val autoTitle = if (!rec.titleEdited) autoTitleFrom(text) else null
