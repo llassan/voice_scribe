@@ -10,6 +10,8 @@ import java.util.concurrent.Executors
 
 private const val LOG_TAG = "LibWhisper"
 
+data class WhisperSegment(val t0Ms: Long, val t1Ms: Long, val text: String)
+
 class WhisperContext private constructor(private var ptr: Long) {
     // Meet Whisper C++ constraint: Don't access from more than one thread at a time.
     private val scope: CoroutineScope = CoroutineScope(
@@ -36,6 +38,19 @@ class WhisperContext private constructor(private var ptr: Long) {
                     append(WhisperLib.getTextSegment(ptr, i))
                 }
             }
+        }
+    }
+
+    /** Segments from the last [transcribeData] call, timestamps in milliseconds. */
+    suspend fun segments(): List<WhisperSegment> = withContext(scope.coroutineContext) {
+        require(ptr != 0L)
+        val count = WhisperLib.getTextSegmentCount(ptr)
+        (0 until count).map { i ->
+            WhisperSegment(
+                t0Ms = WhisperLib.getTextSegmentT0(ptr, i) * 10, // whisper units are 10 ms
+                t1Ms = WhisperLib.getTextSegmentT1(ptr, i) * 10,
+                text = WhisperLib.getTextSegment(ptr, i).trim(),
+            )
         }
     }
 

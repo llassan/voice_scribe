@@ -1,6 +1,9 @@
 package com.vikash.voicescribe.ui
 
 import android.content.Intent
+import android.media.MediaPlayer
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -10,39 +13,118 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.vikash.voicescribe.App
+import com.vikash.voicescribe.data.Recording
 import com.vikash.voicescribe.data.TranscriptStatus
+import kotlinx.coroutines.delay
+import java.io.File
 
 private const val SHARE_FOOTER = "\n\n— Transcribed offline with VoiceScribe"
+
+/** Thin state holder over MediaPlayer for local WAV/M4A playback. */
+@Stable
+private class AudioPlayer(path: String) {
+    var isPlaying by mutableStateOf(false)
+        private set
+    var positionMs by mutableLongStateOf(0L)
+        private set
+    var durationMs by mutableLongStateOf(0L)
+        private set
+    var speed by mutableFloatStateOf(1f)
+        private set
+
+    private val mp = MediaPlayer()
+
+    init {
+        mp.setDataSource(path)
+        mp.prepare()
+        durationMs = mp.duration.toLong()
+        mp.setOnCompletionListener {
+            isPlaying = false
+            positionMs = durationMs
+        }
+    }
+
+    fun toggle() = if (isPlaying) pause() else play()
+
+    fun play() {
+        // setPlaybackParams implicitly starts playback, so only touch it here
+        mp.playbackParams = mp.playbackParams.setSpeed(speed)
+        mp.start()
+        isPlaying = true
+    }
+
+    fun pause() {
+        mp.pause()
+        isPlaying = false
+    }
+
+    fun seekTo(ms: Long) {
+        mp.seekTo(ms.toInt().coerceIn(0, durationMs.toInt()))
+        positionMs = ms.coerceIn(0, durationMs)
+    }
+
+    fun seekAndPlay(ms: Long) {
+        seekTo(ms)
+        if (!isPlaying) play()
+    }
+
+    fun cycleSpeed() {
+        speed = when (speed) {
+            1f -> 1.5f
+            1.5f -> 2f
+            else -> 1f
+        }
+        if (isPlaying) mp.playbackParams = mp.playbackParams.setSpeed(speed)
+    }
+
+    fun tick() {
+        if (isPlaying) positionMs = mp.currentPosition.toLong()
+    }
+
+    fun release() = mp.release()
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,6 +138,20 @@ fun DetailScreen(app: App, recordingId: String, onBack: () -> Unit) {
     if (rec == null) {
         onBack()
         return
+    }
+
+    // Recreated when the background transcode swaps the WAV for an M4A.
+    val player = remember(rec.audioPath) {
+        if (File(rec.audioPath).exists()) runCatching { AudioPlayer(rec.audioPath) }.getOrNull() else null
+    }
+    DisposableEffect(player) {
+        onDispose { player?.release() }
+    }
+    LaunchedEffect(player, player?.isPlaying) {
+        while (player?.isPlaying == true) {
+            player.tick()
+            delay(200)
+        }
     }
 
     fun share(text: String) {
@@ -118,6 +214,10 @@ fun DetailScreen(app: App, recordingId: String, onBack: () -> Unit) {
                 }
             }
 
+            if (player != null) {
+                PlayerBar(player)
+            }
+
             when (rec.status) {
                 TranscriptStatus.DONE -> {
                     TabRow(selectedTabIndex = tab) {
@@ -142,11 +242,7 @@ fun DetailScreen(app: App, recordingId: String, onBack: () -> Unit) {
                                 }
                             }
                         } else {
-                            Text(
-                                rec.transcript.orEmpty(),
-                                style = MaterialTheme.typography.bodyLarge,
-                                lineHeight = MaterialTheme.typography.bodyLarge.lineHeight * 1.3,
-                            )
+                            TranscriptBody(rec, player)
                         }
                         Spacer(Modifier.height(32.dp))
                     }
@@ -187,6 +283,7 @@ fun DetailScreen(app: App, recordingId: String, onBack: () -> Unit) {
             confirmButton = {
                 TextButton(onClick = {
                     confirmDelete = false
+                    player?.release()
                     app.store.delete(rec.id)
                     onBack()
                 }) { Text("Delete") }
@@ -195,6 +292,91 @@ fun DetailScreen(app: App, recordingId: String, onBack: () -> Unit) {
                 TextButton(onClick = { confirmDelete = false }) { Text("Cancel") }
             },
         )
+    }
+}
+
+@Composable
+private fun PlayerBar(player: AudioPlayer) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+    ) {
+        Row(
+            Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            FilledIconButton(onClick = { player.toggle() }) {
+                Icon(
+                    if (player.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                    contentDescription = if (player.isPlaying) "Pause" else "Play",
+                )
+            }
+            Slider(
+                value = player.positionMs.toFloat(),
+                onValueChange = { player.seekTo(it.toLong()) },
+                valueRange = 0f..player.durationMs.coerceAtLeast(1).toFloat(),
+                modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
+            )
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    "${formatDuration(player.positionMs)} / ${formatDuration(player.durationMs)}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                TextButton(onClick = { player.cycleSpeed() }) {
+                    Text(
+                        when (player.speed) {
+                            1.5f -> "1.5×"
+                            2f -> "2×"
+                            else -> "1×"
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TranscriptBody(rec: Recording, player: AudioPlayer?) {
+    if (rec.segments.isEmpty()) {
+        // Pre-0.2 recordings have no timestamps — plain text fallback.
+        Text(
+            rec.transcript.orEmpty(),
+            style = MaterialTheme.typography.bodyLarge,
+            lineHeight = MaterialTheme.typography.bodyLarge.lineHeight * 1.3,
+        )
+        return
+    }
+    rec.segments.forEach { seg ->
+        val active = player != null && player.isPlaying &&
+            player.positionMs >= seg.t0Ms && player.positionMs < seg.t1Ms.coerceAtLeast(seg.t0Ms + 1)
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .background(
+                    if (active) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+                    RoundedCornerShape(8.dp),
+                )
+                .clickable(enabled = player != null) { player?.seekAndPlay(seg.t0Ms) }
+                .padding(horizontal = 6.dp, vertical = 6.dp)
+        ) {
+            Text(
+                formatDuration(seg.t0Ms),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.width(52.dp).padding(top = 3.dp),
+            )
+            Text(
+                seg.text,
+                style = MaterialTheme.typography.bodyLarge,
+                color = if (active) MaterialTheme.colorScheme.onPrimaryContainer
+                else MaterialTheme.colorScheme.onSurface,
+            )
+        }
     }
 }
 

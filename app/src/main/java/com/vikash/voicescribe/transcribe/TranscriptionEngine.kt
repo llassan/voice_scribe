@@ -1,9 +1,11 @@
 package com.vikash.voicescribe.transcribe
 
 import android.util.Log
-import com.vikash.voicescribe.audio.decodeWavToMono16k
+import com.vikash.voicescribe.audio.decodeAudioToMono16k
+import com.vikash.voicescribe.audio.transcodeWavToM4a
 import com.vikash.voicescribe.data.Recording
 import com.vikash.voicescribe.data.RecordingStore
+import com.vikash.voicescribe.data.Segment
 import com.vikash.voicescribe.data.TranscriptStatus
 import com.vikash.voicescribe.model.ModelManager
 import com.vikash.voicescribe.summarize.Summarizer
@@ -58,23 +60,45 @@ class TranscriptionEngine(
         try {
             store.upsert(rec.copy(status = TranscriptStatus.TRANSCRIBING))
             val ctx = loadContext(modelFile)
-            val samples = decodeWavToMono16k(File(rec.wavPath))
+            val samples = decodeAudioToMono16k(File(rec.audioPath))
             val text = ctx.transcribeData(samples, language = "auto", printTimestamp = false)
                 .trim()
+            val segments = ctx.segments()
+                .filter { it.text.isNotBlank() }
+                .map { Segment(it.t0Ms, it.t1Ms, it.text) }
             val language = runCatching { ctx.detectedLanguage() }.getOrDefault("")
             val summary = Summarizer.summarize(text)
             store.upsert(
                 rec.copy(
                     transcript = text.ifBlank { null },
+                    segments = segments,
                     summary = summary,
                     language = language.ifBlank { null },
                     status = if (text.isBlank()) TranscriptStatus.ERROR else TranscriptStatus.DONE,
                     error = if (text.isBlank()) "No speech detected" else null,
                 )
             )
+            if (text.isNotBlank()) compressAudio(id)
         } catch (t: Throwable) {
             Log.e(TAG, "Transcription failed for $id", t)
             store.upsert(rec.copy(status = TranscriptStatus.ERROR, error = t.message ?: "Transcription failed"))
+        }
+    }
+
+    /** Replaces the finished recording's WAV with M4A (~10× smaller). Keeps the WAV on failure. */
+    private fun compressAudio(id: String) {
+        val rec = store.get(id) ?: return
+        val src = File(rec.audioPath)
+        if (!src.exists() || src.extension.lowercase() != "wav") return
+        val dst = store.m4aFileFor(rec.id)
+        try {
+            transcodeWavToM4a(src, dst)
+            check(dst.length() > 0) { "empty output" }
+            store.get(id)?.let { store.upsert(it.copy(audioPath = dst.absolutePath)) }
+            src.delete()
+        } catch (t: Throwable) {
+            Log.w(TAG, "Transcode to M4A failed for $id, keeping WAV", t)
+            dst.delete()
         }
     }
 

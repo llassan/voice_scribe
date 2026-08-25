@@ -129,7 +129,7 @@ class RecorderService : Service() {
                         title = fmt.format(Date()),
                         createdAt = System.currentTimeMillis(),
                         durationMs = durationMs,
-                        wavPath = app.store.wavFileFor(id).absolutePath,
+                        audioPath = app.store.wavFileFor(id).absolutePath,
                         status = TranscriptStatus.NONE,
                     )
                 )

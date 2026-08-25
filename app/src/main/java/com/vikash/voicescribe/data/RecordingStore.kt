@@ -10,13 +10,17 @@ import java.util.UUID
 
 enum class TranscriptStatus { NONE, NEEDS_MODEL, QUEUED, TRANSCRIBING, DONE, ERROR }
 
+data class Segment(val t0Ms: Long, val t1Ms: Long, val text: String)
+
 data class Recording(
     val id: String,
     val title: String,
     val createdAt: Long,
     val durationMs: Long,
-    val wavPath: String,
+    /** WAV right after recording; replaced by M4A once background transcode finishes. */
+    val audioPath: String,
     val transcript: String? = null,
+    val segments: List<Segment> = emptyList(),
     val summary: List<String> = emptyList(),
     val language: String? = null,
     val status: TranscriptStatus = TranscriptStatus.NONE,
@@ -44,6 +48,8 @@ class RecordingStore(context: Context) {
 
     fun wavFileFor(id: String): File = File(dir, "$id.wav")
 
+    fun m4aFileFor(id: String): File = File(dir, "$id.m4a")
+
     fun get(id: String): Recording? = _recordings.value.find { it.id == id }
 
     @Synchronized
@@ -57,6 +63,7 @@ class RecordingStore(context: Context) {
     fun delete(id: String) {
         File(dir, "$id.json").delete()
         wavFileFor(id).delete()
+        m4aFileFor(id).delete()
         _recordings.value = _recordings.value.filter { it.id != id }
     }
 
@@ -65,8 +72,15 @@ class RecordingStore(context: Context) {
         put("title", r.title)
         put("createdAt", r.createdAt)
         put("durationMs", r.durationMs)
-        put("wavPath", r.wavPath)
+        put("audioPath", r.audioPath)
         put("transcript", r.transcript ?: JSONObject.NULL)
+        put("segments", JSONArray(r.segments.map { s ->
+            JSONObject().apply {
+                put("t0", s.t0Ms)
+                put("t1", s.t1Ms)
+                put("text", s.text)
+            }
+        }))
         put("summary", JSONArray(r.summary))
         put("language", r.language ?: JSONObject.NULL)
         put("status", r.status.name)
@@ -78,6 +92,12 @@ class RecordingStore(context: Context) {
         val summary = o.optJSONArray("summary")?.let { arr ->
             List(arr.length()) { arr.getString(it) }
         } ?: emptyList()
+        val segments = o.optJSONArray("segments")?.let { arr ->
+            List(arr.length()) { i ->
+                val s = arr.getJSONObject(i)
+                Segment(s.getLong("t0"), s.getLong("t1"), s.getString("text"))
+            }
+        } ?: emptyList()
         // A recording persisted mid-transcription means the process died: mark it retryable.
         val status = TranscriptStatus.valueOf(o.optString("status", "NONE")).let {
             if (it == TranscriptStatus.QUEUED || it == TranscriptStatus.TRANSCRIBING) TranscriptStatus.NEEDS_MODEL else it
@@ -87,8 +107,10 @@ class RecordingStore(context: Context) {
             title = o.getString("title"),
             createdAt = o.getLong("createdAt"),
             durationMs = o.getLong("durationMs"),
-            wavPath = o.getString("wavPath"),
+            // "wavPath" is the pre-0.2 key
+            audioPath = o.optString("audioPath").ifBlank { o.getString("wavPath") },
             transcript = if (o.isNull("transcript")) null else o.getString("transcript"),
+            segments = segments,
             summary = summary,
             language = if (o.isNull("language")) null else o.getString("language"),
             status = status,
