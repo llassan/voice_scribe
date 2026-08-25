@@ -166,6 +166,8 @@ fun DetailScreen(app: App, recordingId: String, onBack: () -> Unit) {
     var confirmDelete by remember { mutableStateOf(false) }
     var renaming by remember { mutableStateOf(false) }
     var shareMenu by remember { mutableStateOf(false) }
+    var paywall by remember { mutableStateOf(false) }
+    val isPro by app.billing.isPro.collectAsState()
     val scope = rememberCoroutineScope()
 
     if (rec == null) {
@@ -264,17 +266,17 @@ fun DetailScreen(app: App, recordingId: String, onBack: () -> Unit) {
                                     },
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("Export as PDF") },
+                                    text = { Text(if (isPro) "Export as PDF" else "Export as PDF  🔒") },
                                     onClick = {
                                         shareMenu = false
-                                        export(asPdf = true)
+                                        if (isPro) export(asPdf = true) else paywall = true
                                     },
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("Export as Word (.docx)") },
+                                    text = { Text(if (isPro) "Export as Word (.docx)" else "Export as Word (.docx)  🔒") },
                                     onClick = {
                                         shareMenu = false
-                                        export(asPdf = false)
+                                        if (isPro) export(asPdf = false) else paywall = true
                                     },
                                 )
                             }
@@ -375,6 +377,10 @@ fun DetailScreen(app: App, recordingId: String, onBack: () -> Unit) {
                 }
             }
         }
+    }
+
+    if (paywall) {
+        PaywallDialog(billing = app.billing, onDismiss = { paywall = false })
     }
 
     if (renaming) {
