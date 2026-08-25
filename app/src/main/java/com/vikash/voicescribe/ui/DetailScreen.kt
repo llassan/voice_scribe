@@ -2,6 +2,7 @@ package com.vikash.voicescribe.ui
 
 import android.content.Intent
 import android.media.MediaPlayer
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -46,12 +47,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.vikash.voicescribe.App
@@ -64,7 +68,7 @@ private const val SHARE_FOOTER = "\n\n— Transcribed offline with VoiceScribe"
 
 /** Thin state holder over MediaPlayer for local WAV/M4A playback. */
 @Stable
-private class AudioPlayer(path: String) {
+private class AudioPlayer(private val path: String) {
     var isPlaying by mutableStateOf(false)
         private set
     var positionMs by mutableLongStateOf(0L)
@@ -83,6 +87,18 @@ private class AudioPlayer(path: String) {
         mp.setOnCompletionListener {
             isPlaying = false
             positionMs = durationMs
+        }
+        // An IO/decoder error leaves MediaPlayer in a dead state; reopen the file
+        // so the next play() works instead of the bar going permanently inert.
+        mp.setOnErrorListener { player, _, _ ->
+            isPlaying = false
+            runCatching {
+                player.reset()
+                player.setDataSource(path)
+                player.prepare()
+                positionMs = 0
+            }
+            true
         }
     }
 
@@ -224,10 +240,11 @@ fun DetailScreen(app: App, recordingId: String, onBack: () -> Unit) {
                         Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Summary") })
                         Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("Transcript") })
                     }
+                    val scrollState = rememberScrollState()
                     Column(
                         Modifier
                             .fillMaxSize()
-                            .verticalScroll(rememberScrollState())
+                            .verticalScroll(scrollState)
                             .padding(16.dp)
                     ) {
                         if (tab == 0) {
@@ -242,7 +259,7 @@ fun DetailScreen(app: App, recordingId: String, onBack: () -> Unit) {
                                 }
                             }
                         } else {
-                            TranscriptBody(rec, player)
+                            TranscriptBody(rec, player, scrollState)
                         }
                         Spacer(Modifier.height(32.dp))
                     }
@@ -341,7 +358,7 @@ private fun PlayerBar(player: AudioPlayer) {
 }
 
 @Composable
-private fun TranscriptBody(rec: Recording, player: AudioPlayer?) {
+private fun TranscriptBody(rec: Recording, player: AudioPlayer?, scrollState: ScrollState) {
     if (rec.segments.isEmpty()) {
         // Pre-0.2 recordings have no timestamps — plain text fallback.
         Text(
@@ -351,12 +368,29 @@ private fun TranscriptBody(rec: Recording, player: AudioPlayer?) {
         )
         return
     }
-    rec.segments.forEach { seg ->
-        val active = player != null && player.isPlaying &&
-            player.positionMs >= seg.t0Ms && player.positionMs < seg.t1Ms.coerceAtLeast(seg.t0Ms + 1)
+
+    // Row top offsets inside the scrollable column, filled in as rows lay out.
+    val rowOffsets = remember(rec.segments) { mutableStateMapOf<Int, Int>() }
+    val activeIndex = if (player != null && player.isPlaying) {
+        rec.segments.indexOfFirst {
+            player.positionMs >= it.t0Ms && player.positionMs < it.t1Ms.coerceAtLeast(it.t0Ms + 1)
+        }
+    } else -1
+
+    // Keep the active segment ~1/3 from the top, but never yank the list
+    // out from under a user who is scrolling themselves.
+    LaunchedEffect(activeIndex) {
+        if (activeIndex < 0 || scrollState.isScrollInProgress) return@LaunchedEffect
+        val rowTop = rowOffsets[activeIndex] ?: return@LaunchedEffect
+        scrollState.animateScrollTo((rowTop - scrollState.viewportSize / 3).coerceAtLeast(0))
+    }
+
+    rec.segments.forEachIndexed { index, seg ->
+        val active = index == activeIndex
         Row(
             Modifier
                 .fillMaxWidth()
+                .onGloballyPositioned { rowOffsets[index] = it.positionInParent().y.toInt() }
                 .background(
                     if (active) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
                     RoundedCornerShape(8.dp),
