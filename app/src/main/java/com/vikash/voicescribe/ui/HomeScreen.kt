@@ -48,6 +48,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
@@ -62,6 +63,9 @@ import com.vikash.voicescribe.App
 import com.vikash.voicescribe.data.Recording
 import com.vikash.voicescribe.data.TranscriptStatus
 import com.vikash.voicescribe.service.RecorderService
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -198,6 +202,13 @@ private fun RecordingCard(rec: Recording, onClick: () -> Unit) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+            Text(
+                remember(rec.createdAt) {
+                    SimpleDateFormat("MMM d, h:mm a", Locale.getDefault()).format(Date(rec.createdAt))
+                },
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             Spacer(Modifier.height(6.dp))
             when (rec.status) {
                 TranscriptStatus.DONE -> Text(

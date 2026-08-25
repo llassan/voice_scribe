@@ -15,6 +15,8 @@ data class Segment(val t0Ms: Long, val t1Ms: Long, val text: String)
 data class Recording(
     val id: String,
     val title: String,
+    /** True once the user renames it; blocks auto-titling from the transcript. */
+    val titleEdited: Boolean = false,
     val createdAt: Long,
     val durationMs: Long,
     /** WAV right after recording; replaced by M4A once background transcode finishes. */
@@ -70,6 +72,7 @@ class RecordingStore(context: Context) {
     private fun toJson(r: Recording): String = JSONObject().apply {
         put("id", r.id)
         put("title", r.title)
+        put("titleEdited", r.titleEdited)
         put("createdAt", r.createdAt)
         put("durationMs", r.durationMs)
         put("audioPath", r.audioPath)
@@ -105,6 +108,7 @@ class RecordingStore(context: Context) {
         return Recording(
             id = o.getString("id"),
             title = o.getString("title"),
+            titleEdited = o.optBoolean("titleEdited", false),
             createdAt = o.getLong("createdAt"),
             durationMs = o.getLong("durationMs"),
             // "wavPath" is the pre-0.2 key

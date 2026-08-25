@@ -30,6 +30,7 @@ import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
@@ -57,12 +58,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vikash.voicescribe.App
 import com.vikash.voicescribe.data.Recording
 import com.vikash.voicescribe.data.TranscriptStatus
 import kotlinx.coroutines.delay
 import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 private const val SHARE_FOOTER = "\n\n— Transcribed offline with VoiceScribe"
 
@@ -150,6 +155,7 @@ fun DetailScreen(app: App, recordingId: String, onBack: () -> Unit) {
     val rec = recordings.find { it.id == recordingId }
     var tab by remember { mutableIntStateOf(0) }
     var confirmDelete by remember { mutableStateOf(false) }
+    var renaming by remember { mutableStateOf(false) }
 
     if (rec == null) {
         onBack()
@@ -182,7 +188,15 @@ fun DetailScreen(app: App, recordingId: String, onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(rec.title, style = MaterialTheme.typography.titleMedium) },
+                title = {
+                    Text(
+                        rec.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.clickable { renaming = true },
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -215,6 +229,14 @@ fun DetailScreen(app: App, recordingId: String, onBack: () -> Unit) {
                 Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                Text(
+                    remember(rec.createdAt) {
+                        SimpleDateFormat("MMM d, h:mm a", Locale.getDefault()).format(Date(rec.createdAt))
+                    },
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.width(12.dp))
                 Text(
                     formatDuration(rec.durationMs),
                     style = MaterialTheme.typography.labelLarge,
@@ -290,6 +312,34 @@ fun DetailScreen(app: App, recordingId: String, onBack: () -> Unit) {
                 }
             }
         }
+    }
+
+    if (renaming) {
+        var draft by remember(rec.id) { mutableStateOf(rec.title) }
+        AlertDialog(
+            onDismissRequest = { renaming = false },
+            title = { Text("Rename recording") },
+            text = {
+                OutlinedTextField(
+                    value = draft,
+                    onValueChange = { draft = it },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = draft.isNotBlank(),
+                    onClick = {
+                        renaming = false
+                        app.store.upsert(rec.copy(title = draft.trim(), titleEdited = true))
+                    },
+                ) { Text("Save") }
+            },
+            dismissButton = {
+                TextButton(onClick = { renaming = false }) { Text("Cancel") }
+            },
+        )
     }
 
     if (confirmDelete) {

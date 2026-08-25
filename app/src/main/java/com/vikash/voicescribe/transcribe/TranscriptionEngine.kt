@@ -68,8 +68,10 @@ class TranscriptionEngine(
                 .map { Segment(it.t0Ms, it.t1Ms, it.text) }
             val language = runCatching { ctx.detectedLanguage() }.getOrDefault("")
             val summary = Summarizer.summarize(text)
+            val autoTitle = if (!rec.titleEdited) autoTitleFrom(text) else null
             store.upsert(
                 rec.copy(
+                    title = autoTitle ?: rec.title,
                     transcript = text.ifBlank { null },
                     segments = segments,
                     summary = summary,
@@ -83,6 +85,20 @@ class TranscriptionEngine(
             Log.e(TAG, "Transcription failed for $id", t)
             store.upsert(rec.copy(status = TranscriptStatus.ERROR, error = t.message ?: "Transcription failed"))
         }
+    }
+
+    /** First real words of the transcript as a title, or null if there's nothing usable. */
+    private fun autoTitleFrom(text: String): String? {
+        val cleaned = text
+            .replace(Regex("\\[[^\\]]{1,20}\\]"), " ") // drop [Music]/[Bell]-style event tags
+            .replace(Regex("\\s+"), " ")
+            .trim()
+        if (cleaned.length < 8) return null
+        val firstSentence = cleaned.split(Regex("(?<=[.!?।。？！])\\s")).first().trim()
+        val base = firstSentence.ifBlank { cleaned }
+        if (base.length <= 48) return base.trimEnd('.', ',', ';')
+        val cut = base.take(48).substringBeforeLast(' ').trimEnd('.', ',', ';')
+        return if (cut.length >= 8) "$cut…" else base.take(48)
     }
 
     /** Replaces the finished recording's WAV with M4A (~10× smaller). Keeps the WAV on failure. */
