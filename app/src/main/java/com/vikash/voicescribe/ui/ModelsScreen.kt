@@ -1,5 +1,7 @@
 package com.vikash.voicescribe.ui
 
+import android.content.Context
+import android.net.ConnectivityManager
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,6 +14,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -33,6 +36,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vikash.voicescribe.App
@@ -50,10 +54,80 @@ fun ModelsScreen(app: App, onBack: () -> Unit) {
     val isPro by app.billing.isPro.collectAsState()
     var selected by remember { mutableStateOf(app.models.selectedId) }
     var paywall by remember { mutableStateOf(false) }
+    var meteredWarning by remember { mutableStateOf<WhisperModel?>(null) }
+    var showLicenses by remember { mutableStateOf(false) }
+    val context = LocalContext.current
     val recommended = app.models.recommended()
+
+    fun startDownload(model: WhisperModel) {
+        scope.launch {
+            if (app.models.download(model)) {
+                selected = model.id
+                app.engine.retryPending()
+            }
+        }
+    }
+
+    fun requestDownload(model: WhisperModel) {
+        if (model.pro && !isPro) {
+            paywall = true
+            return
+        }
+        // Big downloads on mobile data deserve a heads-up — data is metered
+        // in exactly the markets this app targets.
+        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        if (model.sizeMB >= 100 && cm.isActiveNetworkMetered) {
+            meteredWarning = model
+        } else {
+            startDownload(model)
+        }
+    }
 
     if (paywall) {
         PaywallDialog(billing = app.billing, onDismiss = { paywall = false })
+    }
+
+    meteredWarning?.let { model ->
+        AlertDialog(
+            onDismissRequest = { meteredWarning = null },
+            title = { Text("Download on mobile data?") },
+            text = {
+                Text(
+                    "${model.label} is a ${model.sizeMB} MB download and you're not on Wi-Fi. " +
+                        "This may use a large part of your data plan."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    meteredWarning = null
+                    startDownload(model)
+                }) { Text("Download anyway") }
+            },
+            dismissButton = {
+                TextButton(onClick = { meteredWarning = null }) { Text("Wait for Wi-Fi") }
+            },
+        )
+    }
+
+    if (showLicenses) {
+        AlertDialog(
+            onDismissRequest = { showLicenses = false },
+            title = { Text("About & licenses") },
+            text = {
+                Text(
+                    "VoiceScribe transcribes with whisper.cpp by Georgi Gerganov and " +
+                        "contributors (MIT License) and OpenAI Whisper models. Speaker " +
+                        "detection uses tinydiarize by Akash Mahajan (MIT License).\n\n" +
+                        "MIT License: permission is granted, free of charge, to use, copy, " +
+                        "modify, and distribute the software; the software is provided " +
+                        "“as is”, without warranty of any kind. Full texts: " +
+                        "github.com/ggml-org/whisper.cpp and github.com/akashmjn/tinydiarize."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { showLicenses = false }) { Text("Close") }
+            },
+        )
     }
 
     Scaffold(
@@ -93,20 +167,14 @@ fun ModelsScreen(app: App, onBack: () -> Unit) {
                         selected = model.id
                         app.models.selectedId = model.id
                     },
-                    onDownload = {
-                        if (model.pro && !isPro) {
-                            paywall = true
-                        } else {
-                            scope.launch {
-                                if (app.models.download(model)) {
-                                    selected = model.id
-                                    app.engine.retryPending()
-                                }
-                            }
-                        }
-                    },
+                    onDownload = { requestDownload(model) },
                     onDelete = { app.models.deleteModel(model) },
                 )
+            }
+            item {
+                TextButton(onClick = { showLicenses = true }) {
+                    Text("About & open-source licenses")
+                }
             }
         }
     }
