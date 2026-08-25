@@ -77,8 +77,9 @@ lecture recorder — all in one private app.
 ## Contact / links
 
 - Email: aiamvikku@gmail.com
-- Privacy policy URL: host `store/privacy-policy.html` publicly and paste the URL
-  (options: GitHub Pages from a small public repo, or a page on llassan.com).
+- Privacy policy URL (live): **https://llassan.com/voicescribe/privacy/**
+  (source of truth: `store/privacy-policy.html`, deployed via the llassan-platform
+  frontend's `public/` dir — keep both in sync when the policy changes)
 
 ## In-app product (Monetization → Products → In-app products)
 
