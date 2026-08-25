@@ -63,9 +63,8 @@ class RecordingStore(context: Context) {
 
     @Synchronized
     fun delete(id: String) {
-        File(dir, "$id.json").delete()
-        wavFileFor(id).delete()
-        m4aFileFor(id).delete()
+        // Covers .json, .wav, .m4a, and any imported extension (.mp3, .ogg, …)
+        dir.listFiles { f -> f.name.startsWith("$id.") }?.forEach { it.delete() }
         _recordings.value = _recordings.value.filter { it.id != id }
     }
 

@@ -30,6 +30,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AudioFile
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Stop
@@ -62,7 +63,9 @@ import androidx.core.content.ContextCompat
 import com.vikash.voicescribe.App
 import com.vikash.voicescribe.data.Recording
 import com.vikash.voicescribe.data.TranscriptStatus
+import com.vikash.voicescribe.data.importAudio
 import com.vikash.voicescribe.service.RecorderService
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -87,6 +90,18 @@ fun HomeScreen(
         }
     }
 
+    val importLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenMultipleDocuments()
+    ) { uris ->
+        uris.forEach { uri ->
+            app.appScope.launch {
+                importAudio(context.applicationContext, app.store, uri)?.let {
+                    app.engine.enqueue(it.id)
+                }
+            }
+        }
+    }
+
     fun startRecording() {
         val hasMic = ContextCompat.checkSelfPermission(
             context, Manifest.permission.RECORD_AUDIO
@@ -105,6 +120,9 @@ fun HomeScreen(
             TopAppBar(
                 title = { Text("VoiceScribe", fontWeight = FontWeight.SemiBold) },
                 actions = {
+                    IconButton(onClick = { importLauncher.launch(arrayOf("audio/*")) }) {
+                        Icon(Icons.Filled.AudioFile, contentDescription = "Import audio")
+                    }
                     IconButton(onClick = onOpenModels) {
                         Icon(Icons.Filled.Tune, contentDescription = "Models")
                     }
