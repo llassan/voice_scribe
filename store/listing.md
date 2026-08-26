@@ -111,16 +111,33 @@ lecture recorder — all in one private app.
 
 - `icon-512.png` — hi-res icon (512×512)
 - `feature-graphic-1024x500.png` — feature graphic
-- `screenshots/01-home.png … 06-pro.png` — phone screenshots (1080×2160, 2:1)
+- `screenshots/01-home.png … 06-pro.png` — phone screenshots (1080×1920, 9:16 — Play requires 16:9 or 9:16; 2:1 is rejected)
+
+## Foreground service demo video (required by Play)
+
+Play blocks release submission until each FOREGROUND_SERVICE_* permission is
+declared **with a demo video link**. Ours (unlisted YouTube):
+**https://youtube.com/shorts/kAHv6h5u_mg** — pasted into all three sections
+(data sync, media processing, microphone).
+
+Recorded on an emulator with:
+`adb shell screenrecord --bit-rate 1200000 --time-limit 80 /sdcard/fgs-demo.mp4`
+showing: start recording → home button → ongoing mic notification → stop →
+transcription continues in background with its own notification → transcript.
+Re-record and re-link if the services' behaviour changes.
 
 ## Submission checklist
 
-- [ ] Host privacy policy, paste URL in Play Console
-- [ ] Upload AAB (`./gradlew :app:bundleRelease`), not the APK
-- [ ] Create `voicescribe_pro` in-app product (must exist before Pro purchase works)
-- [ ] Data safety form (answers above)
-- [ ] Foreground-service permission declarations (text above)
-- [ ] Content rating questionnaire (utility app, no objectionable content → Everyone)
-- [ ] Internal testing track first; add license testers for billing tests
+- [x] Host privacy policy, paste URL in Play Console
+- [x] Upload AAB (`./gradlew :app:bundleRelease`), not the APK
+- [ ] Create `voicescribe_pro` in-app product — BLOCKED: needs a Google Payments
+      merchant account (Monetize with Play → set up merchant account) first
+- [x] Data safety form (answers above)
+- [x] Foreground-service permission declarations (+ demo video, see above)
+- [x] Content rating questionnaire → ESRB Everyone / PEGI 3 / USK 0 / IARC 3+
+- [x] Closed testing track ("Alpha"): 177 countries, testers email list
+- [x] Submitted for review (2026-08-26; Google review typically ~7 days)
 - [ ] Verify purchase + restore flows with a license-tester account on a real device
 - [ ] Real-device pass: record → transcript → summary; speaker labels with two real voices
+- [ ] Production access: needs closed test with 12+ opted-in testers for 14+ days,
+      then "Apply for production" on the dashboard
