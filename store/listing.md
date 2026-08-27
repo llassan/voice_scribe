@@ -42,10 +42,13 @@ WHAT YOU GET
 • Share transcripts and summaries to WhatsApp, email, or any app
 • Small download — AI models install on demand, sized to your phone
 
-VOICESCRIBE PRO (optional one-time purchase — not a subscription)
+EVERYTHING IS FREE, AND OPEN SOURCE
+No in-app purchases, no subscriptions, no locked features. Export transcripts
+as PDF or Word, label speakers in meetings, use every model — all free. The
+full source code is public, so anyone can verify the privacy claims above.
 • Export transcripts as PDF or Word (.docx)
 • Speaker labels for meetings and interviews (English)
-• All future Pro features included
+• Source: github.com/llassan/voice_scribe
 
 PERFECT FOR
 • Students recording lectures and turning them into study notes
@@ -73,6 +76,7 @@ lecture recorder — all in one private app.
 
 - Category: **Tools** (alt: Productivity)
 - Tags: voice recorder, speech to text, transcription, audio to text, meeting notes
+- Free, no ads, no in-app purchases, open source (MIT)
 
 ## Contact / links
 
@@ -81,12 +85,12 @@ lecture recorder — all in one private app.
   (source of truth: `store/privacy-policy.html`, deployed via the llassan-platform
   frontend's `public/` dir — keep both in sync when the policy changes)
 
-## In-app product (Monetization → Products → In-app products)
+## Monetization
 
-- Product ID: `voicescribe_pro`
-- Name: VoiceScribe Pro
-- Description: One-time unlock: PDF & Word export, speaker labels, all future Pro features.
-- Price: $7.99 (set per-country pricing from the US base)
+**None.** The app is free and open source (MIT) with no in-app purchases and no
+ads. Nothing to configure under Monetize with Play, and no merchant account
+needed. NOTE: because there are no purchases, the content-rating questionnaire
+answer for "purchase digital goods" must be **No**.
 
 ## Data safety form answers
 
@@ -96,8 +100,8 @@ lecture recorder — all in one private app.
   - Audio/transcripts exist only in local app storage; deleting a recording or
     uninstalling removes them.
 - App functionality notes if reviewers ask: microphone audio is processed on-device
-  only; network access is used solely for model file downloads (Hugging Face CDN)
-  and Google Play Billing.
+  only; network access is used solely for model file downloads (Hugging Face CDN).
+  The app has no billing, ads, analytics, or accounts; source is public.
 
 ## Permission declarations
 
@@ -130,14 +134,13 @@ Re-record and re-link if the services' behaviour changes.
 
 - [x] Host privacy policy, paste URL in Play Console
 - [x] Upload AAB (`./gradlew :app:bundleRelease`), not the APK
-- [ ] Create `voicescribe_pro` in-app product — BLOCKED: needs a Google Payments
-      merchant account (Monetize with Play → set up merchant account) first
+- [x] Monetization: none — free/open-source, no merchant account required
 - [x] Data safety form (answers above)
 - [x] Foreground-service permission declarations (+ demo video, see above)
 - [x] Content rating questionnaire → ESRB Everyone / PEGI 3 / USK 0 / IARC 3+
+- [ ] RE-ANSWER content rating: "purchase digital goods" is now No (billing removed in 1.1.0)
 - [x] Closed testing track ("Alpha"): 177 countries, testers email list
 - [x] Submitted for review (2026-08-26; Google review typically ~7 days)
-- [ ] Verify purchase + restore flows with a license-tester account on a real device
 - [ ] Real-device pass: record → transcript → summary; speaker labels with two real voices
 - [ ] Production access: needs closed test with 12+ opted-in testers for 14+ days,
       then "Apply for production" on the dashboard
