@@ -1,0 +1,15 @@
+VoiceScribe bundles and builds on the following open-source work:
+
+- whisper.cpp — Georgi Gerganov and contributors, MIT License
+  https://github.com/ggml-org/whisper.cpp
+  Compiled into the app as the on-device speech-recognition engine.
+
+- OpenAI Whisper models (ggml conversions), MIT License
+  https://github.com/openai/whisper
+  Downloaded at runtime from the whisper.cpp model repository.
+
+- tinydiarize — Akash Mahajan, MIT License
+  https://github.com/akashmjn/tinydiarize
+  Speaker-turn detection model, downloaded at runtime.
+
+Full license texts are available at the URLs above.

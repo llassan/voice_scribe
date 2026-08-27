@@ -51,9 +51,7 @@ fun ModelsScreen(app: App, onBack: () -> Unit) {
     val scope = rememberCoroutineScope()
     val downloadState by app.models.downloadState.collectAsState()
     val installed by app.models.installedIds.collectAsState()
-    val isPro by app.billing.isPro.collectAsState()
     var selected by remember { mutableStateOf(app.models.selectedId) }
-    var paywall by remember { mutableStateOf(false) }
     var meteredWarning by remember { mutableStateOf<WhisperModel?>(null) }
     var showLicenses by remember { mutableStateOf(false) }
     val context = LocalContext.current
@@ -69,10 +67,6 @@ fun ModelsScreen(app: App, onBack: () -> Unit) {
     }
 
     fun requestDownload(model: WhisperModel) {
-        if (model.pro && !isPro) {
-            paywall = true
-            return
-        }
         // Big downloads on mobile data deserve a heads-up — data is metered
         // in exactly the markets this app targets.
         val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -81,10 +75,6 @@ fun ModelsScreen(app: App, onBack: () -> Unit) {
         } else {
             startDownload(model)
         }
-    }
-
-    if (paywall) {
-        PaywallDialog(billing = app.billing, onDismiss = { paywall = false })
     }
 
     meteredWarning?.let { model ->
@@ -161,7 +151,6 @@ fun ModelsScreen(app: App, onBack: () -> Unit) {
                     isInstalled = model.id in installed,
                     isSelected = selected == model.id,
                     isRecommended = model.id == recommended.id,
-                    isLocked = model.pro && !isPro,
                     downloadState = downloadState,
                     onSelect = {
                         selected = model.id
@@ -186,7 +175,6 @@ private fun ModelCard(
     isInstalled: Boolean,
     isSelected: Boolean,
     isRecommended: Boolean,
-    isLocked: Boolean,
     downloadState: DownloadState,
     onSelect: () -> Unit,
     onDownload: () -> Unit,
@@ -205,9 +193,9 @@ private fun ModelCard(
                 Column(Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(model.label, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                        if (model.pro) {
+                        if (model.diarize) {
                             Text(
-                                "  PRO",
+                                "  SPEAKERS",
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.secondary,
@@ -254,13 +242,7 @@ private fun ModelCard(
                         )
                     }
                     Button(onClick = onDownload, enabled = !anyDownloading) {
-                        Text(
-                            when {
-                                isLocked -> "Unlock to download"
-                                failedThis -> "Retry download"
-                                else -> "Download"
-                            }
-                        )
+                        Text(if (failedThis) "Retry download" else "Download")
                     }
                 }
             }

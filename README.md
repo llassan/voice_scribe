@@ -17,6 +17,7 @@ account, no minute caps. Works in airplane mode.
 - **Summary** — extractive summarizer (frequency-scored sentence selection); zero
   model overhead, runs on any device. An on-device LLM summary is the planned
   upgrade path.
+- **Speaker labels** — optional tinydiarize model tags speaker turns (English).
 - **Storage** — plain files under `filesDir/recordings` (`<id>.wav` + `<id>.json`).
 
 ## Build
@@ -36,9 +37,21 @@ Requires NDK 27.1.12297006 (see `whisper/build.gradle.kts`) and CMake.
 - `whisper/` — Android library wrapping whisper.cpp: JNI (`jni.c`) + Kotlin bindings
   (`LibWhisper.kt`), CPU-tier `.so` selection (fp16 / vfpv4 / generic).
 
-## Product notes
+## Contributing
 
-- Positioning: meetings, lectures, memos — not call recording (Android restrictions).
-- Share/export adds the "Transcribed offline with VoiceScribe" footer.
-- Monetization plan: transcription free forever; one-time unlock for PDF/DOCX export,
-  speaker labels, folder sync.
+Issues and pull requests welcome. The app is deliberately dependency-light:
+Compose + the platform SDK, with whisper.cpp compiled in. Please keep it that way
+— no analytics, no ads, no tracking SDKs, and nothing that sends user audio off
+the device.
+
+## License
+
+VoiceScribe is MIT licensed — see [LICENSE](LICENSE). Third-party components
+(whisper.cpp, Whisper models, tinydiarize) are MIT too; see [NOTICE](NOTICE).
+
+## Positioning notes
+
+- Meetings, lectures, memos — not call recording (Android restricts that).
+- Every feature is free, including PDF/Word export and speaker labels.
+  There are no in-app purchases, no subscriptions, and no accounts.
+- Share/export adds a "Transcribed offline with VoiceScribe" footer.
