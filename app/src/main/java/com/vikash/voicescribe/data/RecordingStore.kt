@@ -110,9 +110,11 @@ class RecordingStore(context: Context) {
                 )
             }
         } ?: emptyList()
-        // A recording persisted mid-transcription means the process died: mark it retryable.
+        // A recording persisted mid-transcription means the process died before it
+        // finished. No job survives process death, so it is pending again, not
+        // model-blocked; TranscriptionEngine's startup sweep re-enqueues these.
         val status = TranscriptStatus.valueOf(o.optString("status", "NONE")).let {
-            if (it == TranscriptStatus.QUEUED || it == TranscriptStatus.TRANSCRIBING) TranscriptStatus.NEEDS_MODEL else it
+            if (it == TranscriptStatus.TRANSCRIBING) TranscriptStatus.QUEUED else it
         }
         return Recording(
             id = o.getString("id"),

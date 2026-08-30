@@ -39,6 +39,7 @@ class TranscriptionEngine(
 
     init {
         scope.launch {
+            recoverInterrupted()
             for (id in queue) {
                 try {
                     processOne(id)
@@ -58,6 +59,27 @@ class TranscriptionEngine(
             runCatching { TranscribeService.start(context) }
         }
         queue.trySend(id)
+    }
+
+    /**
+     * Nothing can be mid-flight at process start, so anything the store still lists
+     * as pending was orphaned by a kill (low-memory deaths are common on the cheap
+     * phones this app targets). Re-queue it, or fail it outright if its audio is gone.
+     */
+    private fun recoverInterrupted() {
+        store.recordings.value
+            .filter { it.status == TranscriptStatus.QUEUED || it.status == TranscriptStatus.TRANSCRIBING }
+            .forEach { rec ->
+                if (File(rec.audioPath).exists()) {
+                    Log.i(TAG, "Recovering interrupted transcription ${rec.id}")
+                    enqueue(rec.id)
+                } else {
+                    Log.w(TAG, "Audio missing for interrupted ${rec.id}, marking error")
+                    store.upsert(
+                        rec.copy(status = TranscriptStatus.ERROR, error = "Recording was interrupted")
+                    )
+                }
+            }
     }
 
     /** Re-queue everything that recorded before a model was installed. */
