@@ -52,6 +52,11 @@ android {
             }
         }
     }
+    androidResources {
+        // The bundled ggml model is already quantized — zipping it saves ~2% of
+        // download and costs an inflate on every load. Store it as-is.
+        noCompress += "bin"
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17

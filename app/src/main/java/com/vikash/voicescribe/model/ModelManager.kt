@@ -20,7 +20,33 @@ data class WhisperModel(
     val diarize: Boolean = false,
     /** Full download URL when the model isn't hosted in the default repo. */
     val url: String? = null,
+    /**
+     * Path inside the APK's assets when the model ships with the app. Bundled
+     * models need no download, so a fresh install transcribes on first open.
+     */
+    val assetPath: String? = null,
 )
+
+/**
+ * A model that's ready to load — either bundled in the APK or downloaded to
+ * files/. whisper.cpp reads both, so nothing is ever unpacked to disk.
+ */
+sealed class ModelSource {
+    /** File name, used to tell the .en and tdrz variants apart at transcribe time. */
+    abstract val fileName: String
+    /** Stable identity, so a loaded context is reused until the model changes. */
+    abstract val key: String
+
+    data class Bundled(val assetPath: String) : ModelSource() {
+        override val fileName get() = assetPath.substringAfterLast('/')
+        override val key get() = "asset:$assetPath"
+    }
+
+    data class Downloaded(val file: File) : ModelSource() {
+        override val fileName get() = file.name
+        override val key get() = file.absolutePath
+    }
+}
 
 sealed class DownloadState {
     data object Idle : DownloadState()
@@ -29,8 +55,9 @@ sealed class DownloadState {
 }
 
 /**
- * Whisper models ship as a post-install download (keeps the APK tiny for
- * install conversion). Quantized ggml builds from the official whisper.cpp repo.
+ * The Tiny model ships inside the APK so the app works the moment it's
+ * installed; the larger models stay post-install downloads to keep that install
+ * small. Quantized ggml builds from the official whisper.cpp repo.
  */
 class ModelManager(private val context: Context) {
 
@@ -40,7 +67,11 @@ class ModelManager(private val context: Context) {
         val CATALOG = listOf(
             WhisperModel(
                 "tiny-q5_1", "Fast (Tiny)", "ggml-tiny-q5_1.bin", 32,
-                "Fastest, lightest. Good for quick memos on any device. 99 languages."
+                "Fastest, lightest. Good for quick memos on any device. 99 languages.",
+                // Ships inside the APK — see scripts/fetch-whisper.sh. Costs ~31 MB
+                // of install size and buys a first run that works offline, with no
+                // download and no call to Hugging Face.
+                assetPath = "models/ggml-tiny-q5_1.bin",
             ),
             WhisperModel(
                 "base-q5_1", "Balanced (Base)", "ggml-base-q5_1.bin", 60,
@@ -76,27 +107,52 @@ class ModelManager(private val context: Context) {
 
     fun fileFor(model: WhisperModel): File = File(modelsDir, model.fileName)
 
-    fun installedModelFile(): File? {
-        val selected = CATALOG.find { it.id == selectedId }?.let { fileFor(it) }
-        if (selected?.exists() == true) return selected
-        // fall back to any installed model
-        return CATALOG.map { fileFor(it) }.firstOrNull { it.exists() }
+    fun isInstalled(model: WhisperModel): Boolean =
+        model.assetPath != null || fileFor(model).exists()
+
+    /** Bundled models can't be removed — they live in the APK. */
+    fun isBundled(model: WhisperModel): Boolean = model.assetPath != null
+
+    fun sourceFor(model: WhisperModel): ModelSource? = when {
+        // A downloaded copy wins: it's byte-identical, and it's what a build
+        // missing its assets falls back to.
+        fileFor(model).exists() -> ModelSource.Downloaded(fileFor(model))
+        model.assetPath != null -> ModelSource.Bundled(model.assetPath)
+        else -> null
     }
 
-    /** Device-tier detection: low-RAM phones get the tiny model by default. */
-    fun recommended(): WhisperModel {
+    fun installedModelSource(): ModelSource? {
+        CATALOG.find { it.id == selectedId }?.let { model -> sourceFor(model)?.let { return it } }
+        // fall back to any installed model
+        return CATALOG.firstNotNullOfOrNull { sourceFor(it) }
+    }
+
+    /**
+     * Tiny, always: it's bundled, so it transcribes on first open with no
+     * download. Bigger models are opt-in upgrades rather than a cold-start tax.
+     */
+    fun recommended(): WhisperModel = CATALOG[0]
+
+    /**
+     * The model worth suggesting once someone records something long enough that
+     * accuracy starts to matter — a lecture or a meeting rather than a memo.
+     * Null on low-RAM phones, where Tiny is the right ceiling anyway.
+     */
+    fun upgradeSuggestion(): WhisperModel? {
         val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
         val info = ActivityManager.MemoryInfo().also { am.getMemoryInfo(it) }
         val totalGB = info.totalMem / (1024.0 * 1024 * 1024)
-        return when {
-            totalGB < 3.5 -> CATALOG[0]
-            totalGB < 6.5 -> CATALOG[1]
-            else -> CATALOG[1] // small stays opt-in: 190 MB download
-        }
+        // small stays opt-in even on big phones: 190 MB is not a nudge.
+        return if (totalGB < 3.5) null else CATALOG[1]
     }
 
+    /** One-shot: the accuracy upgrade is offered once and never nags again. */
+    var upgradeOffered: Boolean
+        get() = prefs.getBoolean("upgrade_offered", false)
+        set(value) { prefs.edit().putBoolean("upgrade_offered", value).apply() }
+
     private fun scanInstalled(): Set<String> =
-        CATALOG.filter { fileFor(it).exists() }.map { it.id }.toSet()
+        CATALOG.filter { isInstalled(it) }.map { it.id }.toSet()
 
     suspend fun download(model: WhisperModel): Boolean = withContext(Dispatchers.IO) {
         val target = fileFor(model)
@@ -139,6 +195,8 @@ class ModelManager(private val context: Context) {
     }
 
     fun deleteModel(model: WhisperModel) {
+        // Bundled models live in the APK; there's nothing on disk to reclaim.
+        if (model.assetPath != null) return
         fileFor(model).delete()
         _installedIds.value = scanInstalled()
     }

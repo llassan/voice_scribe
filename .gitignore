@@ -7,5 +7,7 @@ local.properties
 .cxx/
 # Vendored whisper.cpp source — restore with: scripts/fetch-whisper.sh
 third_party/whisper.cpp/
+# Bundled Tiny model (31 MB) — restore with: scripts/fetch-whisper.sh
+app/src/main/assets/models/
 keystore.properties
 upload-keystore.jks

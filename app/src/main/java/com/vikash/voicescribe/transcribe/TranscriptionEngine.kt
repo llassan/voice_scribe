@@ -9,6 +9,7 @@ import com.vikash.voicescribe.data.RecordingStore
 import com.vikash.voicescribe.data.Segment
 import com.vikash.voicescribe.data.TranscriptStatus
 import com.vikash.voicescribe.model.ModelManager
+import com.vikash.voicescribe.model.ModelSource
 import com.vikash.voicescribe.service.TranscribeService
 import com.vikash.voicescribe.summarize.Summarizer
 import com.whispercpp.whisper.WhisperContext
@@ -23,7 +24,7 @@ private const val TAG = "TranscriptionEngine"
 /**
  * App-scoped serial transcription queue. Whisper contexts are single-threaded,
  * so one job runs at a time; the loaded context is reused across jobs and
- * reloaded only when the selected model file changes.
+ * reloaded only when the selected model changes.
  */
 class TranscriptionEngine(
     private val context: Context,
@@ -34,7 +35,7 @@ class TranscriptionEngine(
     private val queue = Channel<String>(Channel.UNLIMITED)
     private val pending = AtomicInteger(0)
     private var whisper: WhisperContext? = null
-    private var loadedModelPath: String? = null
+    private var loadedModelKey: String? = null
 
     init {
         scope.launch {
@@ -68,18 +69,18 @@ class TranscriptionEngine(
 
     private suspend fun processOne(id: String) {
         val rec = store.get(id) ?: return
-        val modelFile = models.installedModelFile()
-        if (modelFile == null) {
+        val model = models.installedModelSource()
+        if (model == null) {
             store.upsert(rec.copy(status = TranscriptStatus.NEEDS_MODEL))
             return
         }
         try {
             store.upsert(rec.copy(status = TranscriptStatus.TRANSCRIBING))
-            val ctx = loadContext(modelFile)
+            val ctx = loadContext(model)
             val samples = decodeAudioToMono16k(File(rec.audioPath))
-            val diarize = modelFile.name.contains("tdrz")
+            val diarize = model.fileName.contains("tdrz")
             // .en models reject other languages; multilingual models auto-detect.
-            val forcedLanguage = if (modelFile.name.contains(".en")) "en" else "auto"
+            val forcedLanguage = if (model.fileName.contains(".en")) "en" else "auto"
             val text = ctx.transcribeData(
                 samples, language = forcedLanguage, printTimestamp = false, enableDiarization = diarize
             ).trim()
@@ -149,14 +150,20 @@ class TranscriptionEngine(
         }
     }
 
-    private suspend fun loadContext(modelFile: File): WhisperContext {
+    private suspend fun loadContext(model: ModelSource): WhisperContext {
         val existing = whisper
-        if (existing != null && loadedModelPath == modelFile.absolutePath) return existing
+        if (existing != null && loadedModelKey == model.key) return existing
         existing?.release()
         whisper = null
-        val ctx = WhisperContext.createContextFromFile(modelFile.absolutePath)
+        // Bundled models are read straight out of the APK — no copy to files/.
+        val ctx = when (model) {
+            is ModelSource.Bundled ->
+                WhisperContext.createContextFromAsset(context.assets, model.assetPath)
+            is ModelSource.Downloaded ->
+                WhisperContext.createContextFromFile(model.file.absolutePath)
+        }
         whisper = ctx
-        loadedModelPath = modelFile.absolutePath
+        loadedModelKey = model.key
         return ctx
     }
 }

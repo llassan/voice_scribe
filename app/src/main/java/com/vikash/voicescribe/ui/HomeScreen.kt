@@ -45,11 +45,14 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
@@ -70,6 +73,9 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+/** Past this, a recording is a lecture or meeting rather than a quick memo. */
+private const val LONG_RECORDING_MS = 2 * 60 * 1000L
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
@@ -81,6 +87,17 @@ fun HomeScreen(
     val recordings by app.store.recordings.collectAsState()
     val session by RecorderService.session.collectAsState()
     val installed by app.models.installedIds.collectAsState()
+
+    // The accuracy upgrade is pitched only once someone has recorded something
+    // long enough for it to matter — a lecture or meeting, not a memo. Offering
+    // it at cold start would just be the model download we removed, reworded.
+    var upgradeOffered by remember { mutableStateOf(app.models.upgradeOffered) }
+    val upgrade = remember(recordings.size, upgradeOffered) {
+        if (upgradeOffered) return@remember null
+        val recordedSomethingLong = recordings.any { it.durationMs >= LONG_RECORDING_MS }
+        if (!recordedSomethingLong) return@remember null
+        app.models.upgradeSuggestion()?.takeIf { it.id !in app.models.installedIds.value }
+    }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -140,6 +157,43 @@ fun HomeScreen(
         }
     ) { padding ->
         Column(Modifier.padding(padding).fillMaxSize()) {
+            upgrade?.let { model ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer
+                    )
+                ) {
+                    Column(Modifier.padding(16.dp)) {
+                        Text(
+                            "Recording longer sessions?",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        )
+                        Text(
+                            "${model.label} is noticeably more accurate on lectures and " +
+                                "meetings (${model.sizeMB} MB, one time). The model you have " +
+                                "now stays available.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        )
+                        Row {
+                            TextButton(onClick = {
+                                app.models.upgradeOffered = true
+                                upgradeOffered = true
+                            }) { Text("Not now") }
+                            TextButton(onClick = {
+                                app.models.upgradeOffered = true
+                                upgradeOffered = true
+                                onOpenModels()
+                            }) { Text("See it") }
+                        }
+                    }
+                }
+            }
+
             if (installed.isEmpty()) {
                 Card(
                     modifier = Modifier

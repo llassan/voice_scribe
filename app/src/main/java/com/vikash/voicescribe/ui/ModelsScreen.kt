@@ -149,6 +149,7 @@ fun ModelsScreen(app: App, onBack: () -> Unit) {
                 ModelCard(
                     model = model,
                     isInstalled = model.id in installed,
+                    isBundled = app.models.isBundled(model),
                     isSelected = selected == model.id,
                     isRecommended = model.id == recommended.id,
                     downloadState = downloadState,
@@ -173,6 +174,7 @@ fun ModelsScreen(app: App, onBack: () -> Unit) {
 private fun ModelCard(
     model: WhisperModel,
     isInstalled: Boolean,
+    isBundled: Boolean,
     isSelected: Boolean,
     isRecommended: Boolean,
     downloadState: DownloadState,
@@ -203,14 +205,15 @@ private fun ModelCard(
                         }
                         if (isRecommended) {
                             Text(
-                                "  · recommended for this phone",
+                                "  · default",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.primary,
                             )
                         }
                     }
                     Text(
-                        "${model.sizeMB} MB — ${model.description}",
+                        if (isBundled) "Included with the app — ${model.description}"
+                        else "${model.sizeMB} MB download — ${model.description}",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -230,6 +233,7 @@ private fun ModelCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+                isBundled -> Unit
                 isInstalled -> Row {
                     TextButton(onClick = onDelete) { Text("Remove") }
                 }

@@ -12,8 +12,10 @@ account, no minute caps. Works in airplane mode.
   (vendored at `third_party/whisper.cpp`, built via the `:whisper` module's CMake)
   with quantized ggml models. Language auto-detect across 99 languages; the JNI
   layer is patched to pass `language` through and expose the detected language.
-- **Models** — shipped as a **post-install download** (32–190 MB) to keep the APK
-  small. Device RAM decides the recommended tier (tiny / base / small, all q5_1).
+- **Models** — the Tiny model (q5_1, ~31 MB) **ships inside the APK**, so a fresh
+  install transcribes on first open with no download and no network at all. The
+  larger tiers (base / small, and the tdrz speaker model) stay post-install
+  downloads, offered once a recording is long enough for accuracy to matter.
 - **Summary** — extractive summarizer (frequency-scored sentence selection); zero
   model overhead, runs on any device. An on-device LLM summary is the planned
   upgrade path.
@@ -23,9 +25,12 @@ account, no minute caps. Works in airplane mode.
 ## Build
 
 ```bash
-scripts/fetch-whisper.sh   # clones whisper.cpp v1.7.6 into third_party/ (gitignored)
+scripts/fetch-whisper.sh   # whisper.cpp v1.7.6 + the bundled Tiny model (both gitignored)
 ./gradlew :app:assembleDebug
 ```
+
+`fetch-whisper.sh` is required, not optional: without it there is no model asset
+to bundle.
 
 Requires NDK 27.1.12297006 (see `whisper/build.gradle.kts`) and CMake.
 

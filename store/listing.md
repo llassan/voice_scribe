@@ -19,7 +19,8 @@ Offline voice recorder with unlimited AI transcription & summaries. No cloud.
 ```
 Record a lecture, meeting, or voice memo — and get a full transcript plus a
 bullet-point summary, generated entirely on your phone. No cloud. No account.
-No minute limits. Works in airplane mode.
+No minute limits. Works in airplane mode, straight from install — the AI model
+comes with the app, so there's nothing to download before your first recording.
 
 UNLIMITED FREE TRANSCRIPTION
 Other transcription apps cap you at a few hundred minutes a month because they
@@ -40,7 +41,7 @@ WHAT YOU GET
 • Recordings auto-title themselves from what was said
 • Audio playback at 1×, 1.5×, or 2× speed
 • Share transcripts and summaries to WhatsApp, email, or any app
-• Small download — AI models install on demand, sized to your phone
+• Works the moment you install it — the AI model is included, no setup download
 
 EVERYTHING IS FREE, AND OPEN SOURCE
 No in-app purchases, no subscriptions, no locked features. Export transcripts
@@ -59,10 +60,9 @@ PERFECT FOR
 
 HOW IT WORKS
 VoiceScribe uses Whisper-class AI models running directly on your phone's
-processor. Pick the model that fits your device — from a fast 32 MB model for
-quick memos to larger models for maximum accuracy. On phones with less memory,
-VoiceScribe automatically recommends the lighter model so transcription stays
-smooth.
+processor. The fast model is built in and ready on first open. If you record
+longer lectures or meetings, you can download a larger, more accurate model —
+entirely optional, and the built-in one keeps working either way.
 
 Note: transcription speed depends on your phone. Longer recordings take longer
 to process on older devices — but they always finish, even with the app in the
@@ -100,7 +100,9 @@ answer for "purchase digital goods" must be **No**.
   - Audio/transcripts exist only in local app storage; deleting a recording or
     uninstalling removes them.
 - App functionality notes if reviewers ask: microphone audio is processed on-device
-  only; network access is used solely for model file downloads (Hugging Face CDN).
+  only. The default model ships inside the APK, so the app is fully functional with
+  no network at all; network access is used solely for optional larger-model
+  downloads (Hugging Face CDN).
   The app has no billing, ads, analytics, or accounts; source is public.
 
 ## Permission declarations
