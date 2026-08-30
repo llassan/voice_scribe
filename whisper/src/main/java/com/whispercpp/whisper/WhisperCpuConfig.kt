@@ -8,6 +8,15 @@ object WhisperCpuConfig {
     val preferredThreadCount: Int
         // Always use at least 2 threads:
         get() = CpuInfo.getHighPerfCpuCount().coerceAtLeast(2)
+
+    /**
+     * Beam width for decoding. Beam search is meaningfully more accurate than
+     * greedy but costs roughly 2-3x the CPU, which on a two-core budget phone
+     * turns a slow transcription into an unusable one. So: beam search only
+     * where there are cores to spare, greedy (0) everywhere else.
+     */
+    val preferredBeamSize: Int
+        get() = if (preferredThreadCount >= 4) 5 else 0
 }
 
 private class CpuInfo(private val lines: List<String>) {

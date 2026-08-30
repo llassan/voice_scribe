@@ -29,11 +29,15 @@ class WhisperContext private constructor(private var ptr: Long) {
         language: String = "auto",
         printTimestamp: Boolean = true,
         enableDiarization: Boolean = false,
+        useContext: Boolean = true,
     ): String = withContext(scope.coroutineContext) {
         require(ptr != 0L)
         val numThreads = WhisperCpuConfig.preferredThreadCount
-        Log.d(LOG_TAG, "Selecting $numThreads threads")
-        WhisperLib.fullTranscribe(ptr, numThreads, data, language, enableDiarization)
+        val beamSize = WhisperCpuConfig.preferredBeamSize
+        Log.d(LOG_TAG, "Selecting $numThreads threads, beam size $beamSize, context $useContext")
+        WhisperLib.fullTranscribe(
+            ptr, numThreads, data, language, enableDiarization, useContext, beamSize
+        )
         val textCount = WhisperLib.getTextSegmentCount(ptr)
         return@withContext buildString {
             for (i in 0 until textCount) {
@@ -166,7 +170,7 @@ private class WhisperLib {
         external fun initContextFromAsset(assetManager: AssetManager, assetPath: String): Long
         external fun initContext(modelPath: String): Long
         external fun freeContext(contextPtr: Long)
-        external fun fullTranscribe(contextPtr: Long, numThreads: Int, audioData: FloatArray, language: String, tdrzEnable: Boolean)
+        external fun fullTranscribe(contextPtr: Long, numThreads: Int, audioData: FloatArray, language: String, tdrzEnable: Boolean, useContext: Boolean, beamSize: Int)
         external fun getDetectedLanguage(contextPtr: Long): String
         external fun getSegmentSpeakerTurnNext(contextPtr: Long, index: Int): Boolean
         external fun getTextSegmentCount(contextPtr: Long): Int

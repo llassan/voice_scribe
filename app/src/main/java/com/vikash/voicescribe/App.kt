@@ -2,6 +2,7 @@ package com.vikash.voicescribe
 
 import android.app.Application
 import com.vikash.voicescribe.data.RecordingStore
+import com.vikash.voicescribe.model.LanguagePrefs
 import com.vikash.voicescribe.model.ModelManager
 import com.vikash.voicescribe.transcribe.TranscriptionEngine
 import kotlinx.coroutines.CoroutineScope
@@ -15,6 +16,8 @@ class App : Application() {
         private set
     lateinit var models: ModelManager
         private set
+    lateinit var languages: LanguagePrefs
+        private set
     lateinit var engine: TranscriptionEngine
         private set
 
@@ -22,6 +25,7 @@ class App : Application() {
         super.onCreate()
         store = RecordingStore(this)
         models = ModelManager(this)
-        engine = TranscriptionEngine(this, store, models, appScope)
+        languages = LanguagePrefs(this)
+        engine = TranscriptionEngine(this, store, models, languages, appScope)
     }
 }

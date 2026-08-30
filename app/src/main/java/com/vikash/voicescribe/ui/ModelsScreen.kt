@@ -4,7 +4,10 @@ import android.content.Context
 import android.net.ConnectivityManager
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -43,6 +46,7 @@ import com.vikash.voicescribe.App
 import com.vikash.voicescribe.model.DownloadState
 import com.vikash.voicescribe.model.ModelManager
 import com.vikash.voicescribe.model.WhisperModel
+import com.vikash.voicescribe.model.LanguagePrefs
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -54,6 +58,8 @@ fun ModelsScreen(app: App, onBack: () -> Unit) {
     var selected by remember { mutableStateOf(app.models.selectedId) }
     var meteredWarning by remember { mutableStateOf<WhisperModel?>(null) }
     var showLicenses by remember { mutableStateOf(false) }
+    var language by remember { mutableStateOf(app.languages.selected) }
+    var showLanguages by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val recommended = app.models.recommended()
 
@@ -95,6 +101,37 @@ fun ModelsScreen(app: App, onBack: () -> Unit) {
             },
             dismissButton = {
                 TextButton(onClick = { meteredWarning = null }) { Text("Wait for Wi-Fi") }
+            },
+        )
+    }
+
+    if (showLanguages) {
+        AlertDialog(
+            onDismissRequest = { showLanguages = false },
+            title = { Text("Recording language") },
+            text = {
+                LazyColumn(Modifier.heightIn(max = 420.dp)) {
+                    items(app.languages.options(), key = { it.code }) { option ->
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    language = option.code
+                                    app.languages.selected = option.code
+                                    showLanguages = false
+                                }
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            RadioButton(selected = language == option.code, onClick = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text(option.label, style = MaterialTheme.typography.bodyLarge)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showLanguages = false }) { Text("Close") }
             },
         )
     }
@@ -144,6 +181,37 @@ fun ModelsScreen(app: App, onBack: () -> Unit) {
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
+            item {
+                Card(
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable { showLanguages = true }
+                ) {
+                    Column(Modifier.padding(16.dp)) {
+                        Text(
+                            "Recording language",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Text(
+                            app.languages.labelFor(language),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        Text(
+                            if (language == LanguagePrefs.AUTO)
+                                "Whisper will guess the language of each recording. " +
+                                    "Picking the language yourself is more accurate, " +
+                                    "especially on the smaller models."
+                            else
+                                "Choose \"Detect automatically\" if you record in more than " +
+                                    "one language.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
             }
             items(ModelManager.CATALOG, key = { it.id }) { model ->
                 ModelCard(

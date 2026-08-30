@@ -164,15 +164,20 @@ Java_com_whispercpp_whisper_WhisperLib_00024Companion_freeContext(
 JNIEXPORT void JNICALL
 Java_com_whispercpp_whisper_WhisperLib_00024Companion_fullTranscribe(
         JNIEnv *env, jobject thiz, jlong context_ptr, jint num_threads, jfloatArray audio_data,
-        jstring language_str, jboolean tdrz_enable) {
+        jstring language_str, jboolean tdrz_enable, jboolean use_context, jint beam_size) {
     UNUSED(thiz);
     struct whisper_context *context = (struct whisper_context *) context_ptr;
     jfloat *audio_data_arr = (*env)->GetFloatArrayElements(env, audio_data, NULL);
     const jsize audio_data_length = (*env)->GetArrayLength(env, audio_data);
     const char *language_chars = (*env)->GetStringUTFChars(env, language_str, NULL);
 
-    // The below adapted from the Objective-C iOS sample
-    struct whisper_full_params params = whisper_full_default_params(WHISPER_SAMPLING_GREEDY);
+    // Beam search is more accurate but roughly 2-3x the CPU work, so the caller
+    // decides per device (see WhisperCpuConfig.preferredBeamSize).
+    struct whisper_full_params params = whisper_full_default_params(
+            beam_size > 1 ? WHISPER_SAMPLING_BEAM_SEARCH : WHISPER_SAMPLING_GREEDY);
+    if (beam_size > 1) {
+        params.beam_search.beam_size = beam_size;
+    }
     params.print_realtime = false;
     params.print_progress = false;
     params.print_timestamps = true;
@@ -182,7 +187,12 @@ Java_com_whispercpp_whisper_WhisperLib_00024Companion_fullTranscribe(
     params.tdrz_enable = tdrz_enable; // tinydiarize speaker-turn detection (tdrz models only)
     params.n_threads = num_threads;
     params.offset_ms = 0;
-    params.no_context = true;
+    // Carrying decoded text across whisper's 30s windows keeps long recordings
+    // coherent. The upstream Android sample hard-codes no_context = true as a
+    // cheap guard against repetition loops; that costs real accuracy on the
+    // lecture- and meeting-length audio this app is built for, so the caller
+    // chooses. Temperature fallback (on by default) handles the loop case.
+    params.no_context = !use_context;
     params.single_segment = false;
 
     whisper_reset_timings(context);

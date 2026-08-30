@@ -8,6 +8,7 @@ import com.vikash.voicescribe.data.Recording
 import com.vikash.voicescribe.data.RecordingStore
 import com.vikash.voicescribe.data.Segment
 import com.vikash.voicescribe.data.TranscriptStatus
+import com.vikash.voicescribe.model.LanguagePrefs
 import com.vikash.voicescribe.model.ModelManager
 import com.vikash.voicescribe.model.ModelSource
 import com.vikash.voicescribe.service.TranscribeService
@@ -30,6 +31,7 @@ class TranscriptionEngine(
     private val context: Context,
     private val store: RecordingStore,
     private val models: ModelManager,
+    private val languages: LanguagePrefs,
     scope: CoroutineScope,
 ) {
     private val queue = Channel<String>(Channel.UNLIMITED)
@@ -101,10 +103,14 @@ class TranscriptionEngine(
             val ctx = loadContext(model)
             val samples = decodeAudioToMono16k(File(rec.audioPath))
             val diarize = model.fileName.contains("tdrz")
-            // .en models reject other languages; multilingual models auto-detect.
-            val forcedLanguage = if (model.fileName.contains(".en")) "en" else "auto"
+            // .en models only ever decode English; multilingual models use the
+            // chosen language, which defaults to the phone's own rather than
+            // auto-detect (see LanguagePrefs).
+            val forcedLanguage =
+                if (model.fileName.contains(".en")) "en" else languages.selected
             val text = ctx.transcribeData(
-                samples, language = forcedLanguage, printTimestamp = false, enableDiarization = diarize
+                samples, language = forcedLanguage, printTimestamp = false,
+                enableDiarization = diarize, useContext = true,
             ).trim()
             val raw = ctx.segments().filter { it.text.isNotBlank() }
             // tinydiarize marks turn boundaries, not voice identity, so alternate
