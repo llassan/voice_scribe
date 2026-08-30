@@ -17,20 +17,13 @@ Offline voice recorder with unlimited AI transcription & summaries. No cloud.
 ## Full description (max 4000 chars)
 
 ```
-Record a lecture, meeting, or voice memo — and get a full transcript plus a
-bullet-point summary, generated entirely on your phone. No cloud. No account.
-No minute limits. Works in airplane mode, straight from install — the AI model
-comes with the app, so there's nothing to download before your first recording.
+Record a lecture, meeting, or voice memo — and get a full transcript plus a bullet-point summary, generated entirely on your phone. No cloud. No account. No minute limits. Works in airplane mode, straight from install — the AI model comes with the app, so there's nothing to download before your first recording.
 
 UNLIMITED FREE TRANSCRIPTION
-Other transcription apps cap you at a few hundred minutes a month because they
-pay for cloud servers. VoiceScribe runs its AI speech-to-text on your device,
-so transcription is unlimited and free — forever.
+Other transcription apps cap you at a few hundred minutes a month because they pay for cloud servers. VoiceScribe runs its AI speech-to-text on your device, so transcription is unlimited and free — forever.
 
 100% PRIVATE, 100% OFFLINE
-Your audio never leaves your phone. There are no accounts, no analytics, and
-no uploads. Record confidential meetings, medical notes, or personal memos
-with confidence — everything stays in your pocket.
+Your audio never leaves your phone. There are no accounts, no analytics, and no uploads. Record confidential meetings, medical notes, or personal memos with confidence — everything stays in your pocket.
 
 WHAT YOU GET
 • Voice recorder tuned for speech — keeps recording with the screen off
@@ -39,17 +32,14 @@ WHAT YOU GET
 • 99 languages with automatic language detection
 • Import audio files (MP3, M4A, WAV, OGG, FLAC) — unlimited
 • Recordings auto-title themselves from what was said
-• Audio playback at 1×, 1.5×, or 2× speed
+• Audio playback at 1x, 1.5x, or 2x speed
+• Export transcripts as PDF or Word (.docx)
+• Speaker labels for meetings and interviews (English)
 • Share transcripts and summaries to WhatsApp, email, or any app
 • Works the moment you install it — the AI model is included, no setup download
 
 EVERYTHING IS FREE, AND OPEN SOURCE
-No in-app purchases, no subscriptions, no locked features. Export transcripts
-as PDF or Word, label speakers in meetings, use every model — all free. The
-full source code is public, so anyone can verify the privacy claims above.
-• Export transcripts as PDF or Word (.docx)
-• Speaker labels for meetings and interviews (English)
-• Source: github.com/llassan/voice_scribe
+No in-app purchases, no subscriptions, no ads, no locked features. Every feature listed above is free. The complete source code is public, so anyone can verify the privacy claims on this page: github.com/llassan/voice_scribe
 
 PERFECT FOR
 • Students recording lectures and turning them into study notes
@@ -59,17 +49,13 @@ PERFECT FOR
 • Transcribing old audio files you already have
 
 HOW IT WORKS
-VoiceScribe uses Whisper-class AI models running directly on your phone's
-processor. The fast model is built in and ready on first open. If you record
-longer lectures or meetings, you can download a larger, more accurate model —
-entirely optional, and the built-in one keeps working either way.
+VoiceScribe uses Whisper-class AI models running directly on your phone's processor. The fast model is built in and ready the first time you open the app. If you record longer lectures or meetings, you can download a larger, more accurate model — entirely optional, and the built-in one keeps working either way.
 
-Note: transcription speed depends on your phone. Longer recordings take longer
-to process on older devices — but they always finish, even with the app in the
-background.
+Note: transcription speed depends on your phone. Longer recordings take longer to process on older devices — but they always finish, even with the app in the background.
 
-Voice recorder, speech to text, audio to text, transcribe, meeting notes,
-lecture recorder — all in one private app.
+Built on whisper.cpp and OpenAI Whisper (both MIT licensed).
+
+Voice recorder, speech to text, audio to text, transcribe, meeting notes, lecture recorder — all in one private app.
 ```
 
 ## Category & tags
@@ -143,6 +129,9 @@ Re-record and re-link if the services' behaviour changes.
 - [ ] RE-ANSWER content rating: "purchase digital goods" is now No (billing removed in 1.1.0)
 - [x] Closed testing track ("Alpha"): 177 countries, testers email list
 - [x] Submitted for review (2026-08-26; Google review typically ~7 days)
+- [x] 1.2.0 (versionCode 3): bundled Tiny model — AAB + release notes + updated full
+      description saved 2026-08-30. NOTE: this file is the source of truth for the
+      listing; keep it byte-identical to the Console text (it had drifted before)
 - [ ] Real-device pass: record → transcript → summary; speaker labels with two real voices
 - [ ] Production access: needs closed test with 12+ opted-in testers for 14+ days,
       then "Apply for production" on the dashboard
