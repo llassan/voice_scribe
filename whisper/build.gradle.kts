@@ -17,6 +17,11 @@ android {
         externalNativeBuild {
             cmake {
                 arguments += "-DWHISPER_LIB_DIR=${rootProject.file("third_party/whisper.cpp")}"
+                // Align the native libraries to 16 KB pages. Android devices are
+                // moving from 4 KB to 16 KB memory pages, and a 4 KB-aligned .so
+                // fails to load there — Play rejects bundles without this. The
+                // linker flag is belt-and-braces alongside the NDK's own switch.
+                arguments += "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"
             }
         }
     }
