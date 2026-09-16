@@ -66,19 +66,21 @@ class ModelManager(private val context: Context) {
 
         val CATALOG = listOf(
             WhisperModel(
-                "tiny-q5_1", "Fast (Tiny)", "ggml-tiny-q5_1.bin", 32,
-                "Fastest, lightest. Good for quick memos on any device. 99 languages.",
-                // Ships inside the APK — see scripts/fetch-whisper.sh. Costs ~31 MB
+                "base-q5_1", "Balanced (Base)", "ggml-base-q5_1.bin", 57,
+                "Good accuracy, quick on most phones. 99 languages.",
+                // Ships inside the APK — see scripts/fetch-whisper.sh. Costs ~57 MB
                 // of install size and buys a first run that works offline, with no
-                // download and no call to Hugging Face.
-                assetPath = "models/ggml-tiny-q5_1.bin",
+                // download and no call to Hugging Face. Tiny was bundled before
+                // 1.3.0; it was too inaccurate to be the impression the app makes.
+                assetPath = "models/ggml-base-q5_1.bin",
             ),
             WhisperModel(
-                "base-q5_1", "Balanced (Base)", "ggml-base-q5_1.bin", 60,
-                "Better accuracy, still quick on mid-range phones. 99 languages."
+                "tiny-q5_1", "Fast (Tiny)", "ggml-tiny-q5_1.bin", 31,
+                "Fastest and lightest, at the cost of accuracy. Worth downloading " +
+                    "only if Balanced is too slow on this phone. 99 languages."
             ),
             WhisperModel(
-                "small-q5_1", "Accurate (Small)", "ggml-small-q5_1.bin", 190,
+                "small-q5_1", "Accurate (Small)", "ggml-small-q5_1.bin", 181,
                 "Best accuracy. Needs a recent phone with 6 GB+ RAM."
             ),
             WhisperModel(
@@ -128,8 +130,8 @@ class ModelManager(private val context: Context) {
     }
 
     /**
-     * Tiny, always: it's bundled, so it transcribes on first open with no
-     * download. Bigger models are opt-in upgrades rather than a cold-start tax.
+     * Base, always: it's bundled, so it transcribes on first open with no
+     * download. Everything else is an opt-in choice rather than a cold-start tax.
      */
     fun recommended(): WhisperModel = CATALOG[0]
 
@@ -142,8 +144,9 @@ class ModelManager(private val context: Context) {
         val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
         val info = ActivityManager.MemoryInfo().also { am.getMemoryInfo(it) }
         val totalGB = info.totalMem / (1024.0 * 1024 * 1024)
-        // small stays opt-in even on big phones: 190 MB is not a nudge.
-        return if (totalGB < 3.5) null else CATALOG[1]
+        // Base is already bundled, so the only step up is Small — a 181 MB
+        // download that needs the RAM to run. Never suggested below 6 GB.
+        return if (totalGB < 6.5) null else CATALOG.first { it.id == "small-q5_1" }
     }
 
     /** One-shot: the accuracy upgrade is offered once and never nags again. */
