@@ -103,7 +103,10 @@ answer for "purchase digital goods" must be **No**.
 
 - `icon-512.png` — hi-res icon (512×512)
 - `feature-graphic-1024x500.png` — feature graphic
-- `screenshots/01-home.png … 06-pro.png` — phone screenshots (1080×1920, 9:16 — Play requires 16:9 or 9:16; 2:1 is rejected)
+- `screenshots/01-home.png … 06-export.png` — phone screenshots (1080×1920, 9:16 — Play requires 16:9 or 9:16; 2:1 is rejected)
+  - `06-export.png` replaced `06-pro.png` on 2026-09-26: the old shot was the
+    pre-1.1.0 "Unlock exports — $7.99" paywall dialog, which contradicted the
+    free/open-source listing copy and was live on the store for a day.
 
 ## Foreground service demo video (required by Play)
 
