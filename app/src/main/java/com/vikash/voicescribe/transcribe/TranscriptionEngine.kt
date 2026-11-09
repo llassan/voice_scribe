@@ -102,14 +102,16 @@ class TranscriptionEngine(
         }
         try {
             store.upsert(rec.copy(status = TranscriptStatus.TRANSCRIBING))
-            val ctx = loadContext(model)
+            // The model that actually loaded — not necessarily the one asked
+            // for, since a low-memory phone falls back to the rescue model.
+            val (ctx, loaded) = loadContextOrFallback(model)
             val samples = decodeAudioToMono16k(File(rec.audioPath))
-            val diarize = model.fileName.contains("tdrz")
+            val diarize = loaded.fileName.contains("tdrz")
             // .en models only ever decode English; multilingual models use the
             // chosen language, which defaults to the phone's own rather than
             // auto-detect (see LanguagePrefs).
             val forcedLanguage =
-                if (model.fileName.contains(".en")) "en" else languages.selected
+                if (loaded.fileName.contains(".en")) "en" else languages.selected
             val text = ctx.transcribeData(
                 samples, language = forcedLanguage, printTimestamp = false,
                 enableDiarization = diarize, useContext = true,
@@ -150,7 +152,45 @@ class TranscriptionEngine(
             }
         } catch (t: Throwable) {
             Log.e(TAG, "Transcription failed for $id", t)
-            store.upsert(rec.copy(status = TranscriptStatus.ERROR, error = t.message ?: "Transcription failed"))
+            store.upsert(rec.copy(status = TranscriptStatus.ERROR, error = userMessageFor(t)))
+        }
+    }
+
+    /**
+     * whisper.cpp returning a null context means the model wouldn't fit in
+     * memory, which is a sentence about the phone rather than the recording.
+     * Users see this text on the card, so don't put a JNI string in front of them.
+     */
+    private fun userMessageFor(t: Throwable): String {
+        val raw = t.message.orEmpty()
+        return when {
+            raw.contains("create context", ignoreCase = true) ->
+                "This phone doesn't have enough free memory for the transcription " +
+                    "model. Connect to the internet once so a smaller model can be " +
+                    "downloaded, then try again."
+            raw.isBlank() -> "Transcription failed"
+            else -> raw
+        }
+    }
+
+    /**
+     * Loads the chosen model, and on a memory failure falls back to the small
+     * rescue model — downloading it first if it isn't there. Low-RAM phones
+     * cannot load the bundled default at all, and a transcript from a weaker
+     * model beats an error the user can do nothing about. The switch sticks, so
+     * the phone stops retrying a model it can't run.
+     */
+    private suspend fun loadContextOrFallback(model: ModelSource): Pair<WhisperContext, ModelSource> {
+        try {
+            return loadContext(model) to model
+        } catch (t: Throwable) {
+            val rescue = models.fallback
+            if (model.fileName == rescue.fileName) throw t
+            Log.w(TAG, "Couldn't load ${model.fileName}, falling back to ${rescue.fileName}", t)
+            if (!models.isInstalled(rescue) && !models.download(rescue)) throw t
+            models.selectedId = rescue.id
+            val source = models.sourceFor(rescue) ?: throw t
+            return loadContext(source) to source
         }
     }
 

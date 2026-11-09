@@ -25,6 +25,13 @@ data class WhisperModel(
      * models need no download, so a fresh install transcribes on first open.
      */
     val assetPath: String? = null,
+    /**
+     * Kept out of the picker. Tiny is a rescue model, not a choice: it exists
+     * only for phones that cannot load the bundled default, where something
+     * inaccurate beats nothing at all. It appears in the list once installed so
+     * a phone that fell back to it can still see and manage it.
+     */
+    val hidden: Boolean = false,
 )
 
 /**
@@ -76,8 +83,9 @@ class ModelManager(private val context: Context) {
             ),
             WhisperModel(
                 "tiny-q5_1", "Fast (Tiny)", "ggml-tiny-q5_1.bin", 31,
-                "Fastest and lightest, at the cost of accuracy. Worth downloading " +
-                    "only if Balanced is too slow on this phone. 99 languages."
+                "A small rescue model for phones that can't run Balanced. Less " +
+                    "accurate, but it works where Balanced won't. 99 languages.",
+                hidden = true,
             ),
             WhisperModel(
                 "small-q5_1", "Accurate (Small)", "ggml-small-q5_1.bin", 181,
@@ -148,6 +156,12 @@ class ModelManager(private val context: Context) {
         // download that needs the RAM to run. Never suggested below 6 GB.
         return if (totalGB < 6.5) null else CATALOG.first { it.id == "small-q5_1" }
     }
+
+    /** The rescue model used when the bundled default can't be loaded. */
+    val fallback: WhisperModel get() = CATALOG.first { it.id == "tiny-q5_1" }
+
+    /** Models to show in the picker: hidden ones only once they're installed. */
+    fun visibleModels(): List<WhisperModel> = CATALOG.filter { !it.hidden || isInstalled(it) }
 
     /** One-shot: the accuracy upgrade is offered once and never nags again. */
     var upgradeOffered: Boolean

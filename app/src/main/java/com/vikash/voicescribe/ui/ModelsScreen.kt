@@ -312,7 +312,7 @@ fun ModelsScreen(app: App, onBack: () -> Unit) {
                     }
                 }
             }
-            items(ModelManager.CATALOG, key = { it.id }) { model ->
+            items(app.models.visibleModels(), key = { it.id }) { model ->
                 ModelCard(
                     model = model,
                     isInstalled = model.id in installed,
