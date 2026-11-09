@@ -8,6 +8,7 @@ import com.vikash.voicescribe.data.Recording
 import com.vikash.voicescribe.data.RecordingStore
 import com.vikash.voicescribe.data.Segment
 import com.vikash.voicescribe.data.TranscriptStatus
+import com.vikash.voicescribe.model.AppSettings
 import com.vikash.voicescribe.model.LanguagePrefs
 import com.vikash.voicescribe.model.ModelManager
 import com.vikash.voicescribe.model.ModelSource
@@ -32,6 +33,7 @@ class TranscriptionEngine(
     private val store: RecordingStore,
     private val models: ModelManager,
     private val languages: LanguagePrefs,
+    private val settings: AppSettings,
     scope: CoroutineScope,
 ) {
     private val queue = Channel<String>(Channel.UNLIMITED)
@@ -140,7 +142,12 @@ class TranscriptionEngine(
                     error = if (text.isBlank()) "No speech detected" else null,
                 )
             )
-            if (text.isNotBlank()) compressAudio(id)
+            if (text.isNotBlank()) {
+                // The audio is only discarded once a transcript exists. A recording
+                // that failed to transcribe keeps its audio so it can be retried —
+                // otherwise a bad transcription would leave nothing at all.
+                if (settings.saveAudio.value) compressAudio(id) else discardAudio(id)
+            }
         } catch (t: Throwable) {
             Log.e(TAG, "Transcription failed for $id", t)
             store.upsert(rec.copy(status = TranscriptStatus.ERROR, error = t.message ?: "Transcription failed"))
@@ -159,6 +166,21 @@ class TranscriptionEngine(
         if (base.length <= 48) return base.trimEnd('.', ',', ';')
         val cut = base.take(48).substringBeforeLast(' ').trimEnd('.', ',', ';')
         return if (cut.length >= 8) "$cut…" else base.take(48)
+    }
+
+    /**
+     * Deletes the recording's audio and clears its path, leaving the transcript
+     * alone. Used when "Save audio recordings" is off. Imported files were copied
+     * into app storage, so only our copy goes — the user's original is untouched.
+     */
+    private fun discardAudio(id: String) {
+        val rec = store.get(id) ?: return
+        val audio = File(rec.audioPath)
+        if (audio.exists() && !audio.delete()) {
+            Log.w(TAG, "Couldn't delete audio for $id, keeping the path")
+            return
+        }
+        store.get(id)?.let { store.upsert(it.copy(audioPath = "")) }
     }
 
     /** Replaces the finished recording's WAV with M4A (~10× smaller). Keeps the WAV on failure. */

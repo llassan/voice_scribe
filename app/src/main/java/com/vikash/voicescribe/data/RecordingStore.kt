@@ -123,7 +123,11 @@ class RecordingStore(context: Context) {
             createdAt = o.getLong("createdAt"),
             durationMs = o.getLong("durationMs"),
             // "wavPath" is the pre-0.2 key
-            audioPath = o.optString("audioPath").ifBlank { o.getString("wavPath") },
+            // "wavPath" is the pre-1.1 field name. optString, not getString: a
+            // recording whose audio was discarded has an empty audioPath and no
+            // wavPath, and getString would throw — silently dropping the whole
+            // recording, transcript and all, from the list.
+            audioPath = o.optString("audioPath").ifBlank { o.optString("wavPath") },
             transcript = if (o.isNull("transcript")) null else o.getString("transcript"),
             segments = segments,
             summary = summary,

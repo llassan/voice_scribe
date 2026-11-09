@@ -27,7 +27,9 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.Switch
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -47,6 +49,7 @@ import com.vikash.voicescribe.model.DownloadState
 import com.vikash.voicescribe.model.ModelManager
 import com.vikash.voicescribe.model.WhisperModel
 import com.vikash.voicescribe.model.LanguagePrefs
+import com.vikash.voicescribe.model.ThemeMode
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -59,6 +62,9 @@ fun ModelsScreen(app: App, onBack: () -> Unit) {
     var meteredWarning by remember { mutableStateOf<WhisperModel?>(null) }
     var showLicenses by remember { mutableStateOf(false) }
     var language by remember { mutableStateOf(app.languages.selected) }
+    val themeMode by app.settings.themeMode.collectAsState()
+    val saveAudio by app.settings.saveAudio.collectAsState()
+    var showTheme by remember { mutableStateOf(false) }
     var showLanguages by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val recommended = app.models.recommended()
@@ -102,6 +108,38 @@ fun ModelsScreen(app: App, onBack: () -> Unit) {
             dismissButton = {
                 TextButton(onClick = { meteredWarning = null }) { Text("Wait for Wi-Fi") }
             },
+        )
+    }
+
+    if (showTheme) {
+        AlertDialog(
+            onDismissRequest = { showTheme = false },
+            title = { Text("Appearance") },
+            text = {
+                Column {
+                    listOf(
+                        ThemeMode.SYSTEM to "System default",
+                        ThemeMode.LIGHT to "Light",
+                        ThemeMode.DARK to "Dark",
+                    ).forEach { (mode, label) ->
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    app.settings.setThemeMode(mode)
+                                    showTheme = false
+                                }
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            RadioButton(selected = themeMode == mode, onClick = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text(label, style = MaterialTheme.typography.bodyLarge)
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { showTheme = false }) { Text("Close") } },
         )
     }
 
@@ -160,7 +198,7 @@ fun ModelsScreen(app: App, onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Transcription model") },
+                title = { Text("Settings") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -181,6 +219,67 @@ fun ModelsScreen(app: App, onBack: () -> Unit) {
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
+            item {
+                Card(
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable { showTheme = true }
+                ) {
+                    Column(Modifier.padding(16.dp)) {
+                        Text(
+                            "Appearance",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Text(
+                            when (themeMode) {
+                                ThemeMode.SYSTEM -> "System default"
+                                ThemeMode.LIGHT -> "Light"
+                                ThemeMode.DARK -> "Dark"
+                            },
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        Text(
+                            "Follow the phone's light or dark setting, or pin one.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+            item {
+                Card(Modifier.fillMaxWidth()) {
+                    Row(
+                        Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                "Save audio recordings",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                            Text(
+                                if (saveAudio)
+                                    "Recordings are kept so you can play them back and tap " +
+                                        "the transcript to jump to a moment."
+                                else
+                                    "Audio is deleted once the transcript is made, so playback " +
+                                        "and tap-to-seek aren't available. A recording that fails " +
+                                        "to transcribe keeps its audio so you can retry.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Switch(
+                            checked = saveAudio,
+                            onCheckedChange = { app.settings.setSaveAudio(it) },
+                        )
+                    }
+                }
             }
             item {
                 Card(

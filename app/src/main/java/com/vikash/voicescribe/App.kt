@@ -2,6 +2,7 @@ package com.vikash.voicescribe
 
 import android.app.Application
 import com.vikash.voicescribe.data.RecordingStore
+import com.vikash.voicescribe.model.AppSettings
 import com.vikash.voicescribe.model.LanguagePrefs
 import com.vikash.voicescribe.model.ModelManager
 import com.vikash.voicescribe.transcribe.TranscriptionEngine
@@ -18,6 +19,8 @@ class App : Application() {
         private set
     lateinit var languages: LanguagePrefs
         private set
+    lateinit var settings: AppSettings
+        private set
     lateinit var engine: TranscriptionEngine
         private set
 
@@ -26,6 +29,7 @@ class App : Application() {
         store = RecordingStore(this)
         models = ModelManager(this)
         languages = LanguagePrefs(this)
-        engine = TranscriptionEngine(this, store, models, languages, appScope)
+        settings = AppSettings(this)
+        engine = TranscriptionEngine(this, store, models, languages, settings, appScope)
     }
 }

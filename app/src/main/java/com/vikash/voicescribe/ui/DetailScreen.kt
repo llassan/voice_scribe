@@ -174,6 +174,7 @@ fun DetailScreen(app: App, recordingId: String, onBack: () -> Unit) {
     }
 
     // Recreated when the background transcode swaps the WAV for an M4A.
+    val hasAudio = rec.audioPath.isNotBlank() && File(rec.audioPath).exists()
     val player = remember(rec.audioPath) {
         if (File(rec.audioPath).exists()) runCatching { AudioPlayer(rec.audioPath) }.getOrNull() else null
     }
@@ -243,8 +244,12 @@ fun DetailScreen(app: App, recordingId: String, onBack: () -> Unit) {
                     }
                 },
                 actions = {
-                    IconButton(onClick = { app.engine.enqueue(rec.id) }) {
-                        Icon(Icons.Filled.Refresh, contentDescription = "Re-transcribe")
+                    // Re-transcribing needs the audio, which is gone when
+                    // "Save audio recordings" is off.
+                    if (hasAudio) {
+                        IconButton(onClick = { app.engine.enqueue(rec.id) }) {
+                            Icon(Icons.Filled.Refresh, contentDescription = "Re-transcribe")
+                        }
                     }
                     if (rec.status == TranscriptStatus.DONE) {
                         Box {
@@ -368,10 +373,14 @@ fun DetailScreen(app: App, recordingId: String, onBack: () -> Unit) {
                 TranscriptStatus.ERROR -> CenteredStatus {
                     Text(rec.error ?: "Transcription failed", color = MaterialTheme.colorScheme.error)
                     Spacer(Modifier.height(8.dp))
-                    TextButton(onClick = { app.engine.enqueue(rec.id) }) { Text("Retry") }
+                    if (hasAudio) {
+                        TextButton(onClick = { app.engine.enqueue(rec.id) }) { Text("Retry") }
+                    }
                 }
                 TranscriptStatus.NONE -> CenteredStatus {
-                    TextButton(onClick = { app.engine.enqueue(rec.id) }) { Text("Transcribe") }
+                    if (hasAudio) {
+                        TextButton(onClick = { app.engine.enqueue(rec.id) }) { Text("Transcribe") }
+                    }
                 }
             }
         }

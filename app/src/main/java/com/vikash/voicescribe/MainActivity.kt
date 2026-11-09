@@ -5,6 +5,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -19,7 +21,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         val app = application as App
         setContent {
-            VoiceScribeTheme {
+            val themeMode by app.settings.themeMode.collectAsState()
+            VoiceScribeTheme(mode = themeMode) {
                 AppNav(app)
             }
         }
