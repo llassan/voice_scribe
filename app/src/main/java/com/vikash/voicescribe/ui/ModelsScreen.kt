@@ -80,9 +80,14 @@ fun ModelsScreen(app: App, onBack: () -> Unit) {
 
     fun requestDownload(model: WhisperModel) {
         // Big downloads on mobile data deserve a heads-up — data is metered
-        // in exactly the markets this app targets.
-        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        if (model.sizeMB >= 100 && cm.isActiveNetworkMetered) {
+        // in exactly the markets this app targets. Never let that courtesy
+        // check block the download itself: if the connection state can't be
+        // read, assume unmetered and get on with it.
+        val metered = runCatching {
+            val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            cm.isActiveNetworkMetered
+        }.getOrDefault(false)
+        if (model.sizeMB >= 100 && metered) {
             meteredWarning = model
         } else {
             startDownload(model)
