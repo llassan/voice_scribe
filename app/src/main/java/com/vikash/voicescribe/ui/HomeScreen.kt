@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -331,6 +332,12 @@ private fun RecordBar(
         Modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surface)
+            // Scaffold insets its CONTENT slot, not a custom bottomBar — the bar has
+            // to hold back the navigation bar itself. Without this, three-button
+            // navigation draws the Home button straight through "Tap to record".
+            // Padding goes after the background so the surface still fills the
+            // gesture/button strip rather than leaving the window colour showing.
+            .navigationBarsPadding()
             .padding(vertical = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
