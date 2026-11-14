@@ -10,6 +10,8 @@ realistic library straight into the app's private directory instead.
     adb shell run-as com.vikash.voicescribe sh < store/seed.sh
 
 Needs a DEBUG build installed (run-as only works on debuggable packages).
+Shoot at `adb shell wm size 1080x1920`: Play's phone screenshots must be 9:16
+exactly, and anything taller lands in the Console's "Needs cropping" bucket.
 The audio is silence sized to match each recording's stated duration, so the
 player shows the right length and the transcript timestamps line up.
 """
