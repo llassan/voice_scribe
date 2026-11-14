@@ -8,6 +8,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import com.vikash.voicescribe.model.ThemeMode
 
+/** Resolves a [ThemeMode] against the phone's own setting. */
+@Composable
+fun isDarkTheme(mode: ThemeMode): Boolean = when (mode) {
+    ThemeMode.SYSTEM -> isSystemInDarkTheme()
+    ThemeMode.LIGHT -> false
+    ThemeMode.DARK -> true
+}
+
 private val Dark = darkColorScheme(
     primary = Color(0xFF7FD1C8),
     onPrimary = Color(0xFF00332E),
@@ -39,11 +47,7 @@ private val Light = lightColorScheme(
 
 @Composable
 fun VoiceScribeTheme(mode: ThemeMode = ThemeMode.SYSTEM, content: @Composable () -> Unit) {
-    val dark = when (mode) {
-        ThemeMode.SYSTEM -> isSystemInDarkTheme()
-        ThemeMode.LIGHT -> false
-        ThemeMode.DARK -> true
-    }
+    val dark = isDarkTheme(mode)
     MaterialTheme(
         colorScheme = if (dark) Dark else Light,
         content = content,
