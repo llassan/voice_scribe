@@ -1,12 +1,19 @@
 package com.vikash.voicescribe.data
 
 import android.content.Context
+import android.media.MediaMetadataRetriever
+import android.util.Log
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import java.util.UUID
+
+private const val TAG = "RecordingStore"
 
 enum class TranscriptStatus { NONE, NEEDS_MODEL, QUEUED, TRANSCRIBING, DONE, ERROR }
 
@@ -46,11 +53,66 @@ class RecordingStore(context: Context) {
     val recordings: StateFlow<List<Recording>> = _recordings
 
     init {
-        _recordings.value = dir.listFiles { f -> f.extension == "json" }
-            ?.mapNotNull { runCatching { fromJson(it.readText()) }.getOrNull() }
-            ?.sortedByDescending { it.createdAt }
-            ?: emptyList()
+        _recordings.value = load()
     }
+
+    /**
+     * Builds the list from disk, and never loses audio that is still there.
+     *
+     * Previously a recording whose .json failed to parse was dropped silently —
+     * no log, no trace in the UI — while its audio sat on disk untouched. To the
+     * user that is indistinguishable from "all my recordings disappeared", and
+     * nothing in the app could tell them otherwise. Now a parse failure is logged
+     * with the file that caused it, and any audio file without a readable .json
+     * is recovered as a playable recording instead of becoming invisible.
+     */
+    private fun load(): List<Recording> {
+        val files = dir.listFiles() ?: return emptyList()
+
+        val parsed = files.filter { it.extension == "json" }.mapNotNull { f ->
+            runCatching { fromJson(f.readText()) }
+                .onFailure { Log.w(TAG, "Unreadable recording index ${f.name}, will try to recover its audio", it) }
+                .getOrNull()
+        }
+
+        val known = parsed.mapTo(mutableSetOf()) { it.id }
+        val recovered = files
+            .filter { it.extension != "json" && it.nameWithoutExtension !in known }
+            .map { audio ->
+                Log.w(TAG, "Recovering orphaned audio ${audio.name}")
+                Recording(
+                    id = audio.nameWithoutExtension,
+                    title = "Recovered — ${dateFormat.format(Date(audio.lastModified()))}",
+                    createdAt = audio.lastModified(),
+                    durationMs = durationOf(audio),
+                    audioPath = audio.absolutePath,
+                )
+            }
+
+        // Persist the rebuilt entries so the recovery is permanent and they behave
+        // like any other recording from here on (rename, transcribe, delete).
+        recovered.forEach { rec ->
+            runCatching { File(dir, "${rec.id}.json").writeText(toJson(rec)) }
+                .onFailure { Log.w(TAG, "Could not persist recovered ${rec.id}", it) }
+        }
+
+        return (parsed + recovered).sortedByDescending { it.createdAt }
+    }
+
+    /** Best-effort; a recovered file with an unreadable header still lists, at 0:00. */
+    private fun durationOf(f: File): Long = runCatching {
+        // Not use{}: MediaMetadataRetriever only became AutoCloseable at API 29
+        // and this app supports 26.
+        val mmr = MediaMetadataRetriever()
+        try {
+            mmr.setDataSource(f.absolutePath)
+            mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLong() ?: 0L
+        } finally {
+            mmr.release()
+        }
+    }.getOrDefault(0L)
+
+    private val dateFormat get() = SimpleDateFormat("MMM d, h:mm a", Locale.getDefault())
 
     fun newId(): String = UUID.randomUUID().toString()
 

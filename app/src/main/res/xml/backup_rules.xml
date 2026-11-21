@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Auto Backup rules for API 26-30 (API 31+ uses data_extraction_rules.xml).
+
+  Recordings are excluded from cloud backup. The store listing and privacy
+  policy both promise that audio never leaves the phone, and Android's default
+  (backup everything under filesDir) would quietly upload it to the user's
+  Google Drive — so the default contradicted the promise. Settings and model
+  choices still back up; they are small and carry nothing private.
+-->
+<full-backup-content>
+    <exclude domain="file" path="recordings" />
+</full-backup-content>

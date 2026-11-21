@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  API 31+ equivalent of backup_rules.xml.
+
+  The two sections differ on purpose. Cloud backup sends data to Google's
+  servers, which the privacy policy says never happens to recordings, so they
+  are excluded. A device-to-device transfer is a direct, user-initiated copy to
+  their own new phone with no server in between, so recordings ARE included —
+  otherwise moving phones silently loses every recording, which is exactly the
+  kind of disappearance this release is meant to prevent.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="file" path="recordings" />
+    </cloud-backup>
+    <device-transfer />
+</data-extraction-rules>
