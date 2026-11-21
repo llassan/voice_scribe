@@ -47,8 +47,14 @@ Requires NDK 27.1.12297006 (see `whisper/build.gradle.kts`) and CMake.
 
 Issues and pull requests welcome. The app is deliberately dependency-light:
 Compose + the platform SDK, with whisper.cpp compiled in. Please keep it that way
-— no analytics, no ads, no tracking SDKs, and nothing that sends user audio off
-the device.
+— no analytics, no tracking SDKs, and nothing that sends user audio off the
+device.
+
+There is exactly one exception, and it is meant to stay exactly one: a single
+AdMob banner on the recordings list, which is what pays for the app. It is
+non-personalised, every advertising-ID permission is stripped in the manifest,
+and it has no access to recordings or transcripts. Please don't add a second
+placement, an interstitial, or anything that gates a feature behind an ad.
 
 ## License
 

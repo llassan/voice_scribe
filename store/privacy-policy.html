@@ -16,23 +16,47 @@
 </head>
 <body>
 <h1>VoiceScribe — Privacy Policy</h1>
-<p class="meta">Effective date: August 30, 2026</p>
+<p class="meta">Effective date: November 21, 2026</p>
 
 <p>VoiceScribe is an offline voice recorder that transcribes and summarizes audio
 <strong>entirely on your device</strong>. It was built so that your recordings never
-have to leave your phone — and they don't.</p>
+have to leave your phone — and they don't. The app shows a single banner
+advertisement, which is the one part of it that talks to the internet about anything;
+this policy explains exactly what that involves.</p>
 
-<h2>What we collect</h2>
+<h2>What VoiceScribe collects</h2>
 <p><strong>Nothing.</strong> VoiceScribe has no user accounts, no sign-in, no analytics,
-no advertising SDKs, and no trackers. We do not collect, transmit, sell, or share any
-personal data.</p>
+and no trackers of its own. We do not collect, transmit, sell, or share any personal
+data, and we never see your recordings, transcripts, or anything else about how you use
+the app.</p>
 
 <h2>Your recordings and transcripts</h2>
 <p>Audio you record or import, and the transcripts, summaries, and speaker labels
 generated from it, are processed by AI models running locally on your phone and are
 stored only in VoiceScribe's private app storage on your device. They are never
-uploaded anywhere. They are removed when you delete a recording in the app or
-uninstall the app.</p>
+uploaded anywhere — not to us, and not to the advertising network described below.
+They are removed when you delete a recording in the app or uninstall the app.</p>
+
+<h2>Advertising</h2>
+<p>VoiceScribe displays one banner advertisement on the recordings screen, provided by
+Google AdMob. This is how the app pays for itself while every feature stays free.</p>
+<p>Ads in VoiceScribe are <strong>non-personalized</strong>. The app does not request
+the Android advertising ID — that permission is explicitly removed from the app — so
+Google cannot build or use an advertising profile to target you.</p>
+<p>To fill the banner, Google still receives, at the moment an ad is requested:</p>
+<ul>
+  <li>your device's IP address, which also tells Google roughly which country you are in;</li>
+  <li>basic device information such as device model, operating system version, screen
+      size, and language;</li>
+  <li>whether the ad was shown and whether it was tapped.</li>
+</ul>
+<p>Google uses this to choose an ad, to cap how often you see the same one, and to
+detect fraud. How Google handles data from apps using its services is described in
+<a href="https://policies.google.com/technologies/partner-sites">How Google uses
+information from sites or apps that use our services</a>.</p>
+<p><strong>Your audio, transcripts, and summaries are never part of this.</strong> The
+advertising component has no access to your recordings or to anything you have
+transcribed; it does not know what the app is being used for.</p>
 
 <h2>Microphone permission</h2>
 <p>VoiceScribe requests microphone access solely to record audio when you press the
@@ -40,14 +64,17 @@ record button. Recording is always user-initiated, shown with a visible notifica
 while active, and never happens in the background without you starting it.</p>
 
 <h2>When the app uses the internet</h2>
-<p>VoiceScribe works fully offline, including on first launch: the default transcription
-model is included in the app itself, so nothing needs to be downloaded to use it. The
-network is used for exactly one optional thing:</p>
+<p>Transcription and summarization work fully offline, including on first launch: the
+default transcription model is included in the app itself, so nothing needs to be
+downloaded to use it. The network is used for exactly two things:</p>
 <ul>
+  <li><strong>Requesting the banner ad</strong> described above, which happens while you
+      are on the recordings screen.</li>
   <li><strong>Downloading a larger transcription model</strong>, only if you choose one
       (from the Hugging Face content delivery network). No personal data or audio is
       sent — this is a plain file download.</li>
 </ul>
+<p>No audio, transcript, or summary is ever sent over the network by either of these.</p>
 
 <h2>Sharing and exports</h2>
 <p>Transcripts, summaries, and exported PDF/Word documents leave the app only when you
@@ -56,19 +83,27 @@ does not transmit them on its own.</p>
 
 <h2>Open source</h2>
 <p>VoiceScribe is free and open-source software (MIT licensed). There are no in-app
-purchases, no subscriptions, and no advertising. You can read the complete source
-code — and verify every claim on this page — at
+purchases, no subscriptions, and no locked features — the app is supported by the single
+banner ad described above. You can read the complete source code — and verify every
+claim on this page, including exactly how the ad is loaded and which permissions are
+removed — at
 <a href="https://github.com/llassan/voice_scribe">github.com/llassan/voice_scribe</a>.</p>
 
 <h2>Children</h2>
-<p>VoiceScribe is not directed at children under 13 and collects no data from anyone,
+<p>VoiceScribe is not directed at children under 13 and we collect no data from anyone,
 including children.</p>
+
+<h2>Your choices</h2>
+<p>You can stop all data sharing described under Advertising by uninstalling the app.
+Because VoiceScribe holds nothing about you on any server, there is no account to close
+and no data for us to delete on request — deleting a recording in the app, or
+uninstalling, removes it from your device completely.</p>
 
 <h2>Changes to this policy</h2>
 <p>If this policy changes, the updated version will be posted at this URL with a new
-effective date. Because the app collects no data, changes are expected to be rare.</p>
+effective date.</p>
 
 <h2>Contact</h2>
-<p>Questions about this policy: <a href="mailto:aiamvikku@gmail.com">aiamvikku@gmail.com</a></p>
+<p>Questions about this policy: aiamvikku&#64;gmail.com</p>
 </body>
 </html>

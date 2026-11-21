@@ -23,7 +23,7 @@ UNLIMITED FREE TRANSCRIPTION
 Other transcription apps cap you at a few hundred minutes a month because they pay for cloud servers. VoiceScribe runs its AI speech-to-text on your device, so transcription is unlimited and free — forever.
 
 100% PRIVATE, 100% OFFLINE
-Your audio never leaves your phone. There are no accounts, no analytics, and no uploads. Record confidential meetings, medical notes, or personal memos with confidence — everything stays in your pocket.
+Your audio never leaves your phone. Transcription runs entirely on your device — no accounts, no uploads, and nothing about your recordings is ever sent to a server. Record confidential meetings, medical notes, or personal memos with confidence — everything stays in your pocket.
 
 WHAT YOU GET
 • Voice recorder tuned for speech — keeps recording with the screen off
@@ -38,8 +38,8 @@ WHAT YOU GET
 • Share transcripts and summaries to WhatsApp, email, or any app
 • Works the moment you install it — the AI model is included, no setup download
 
-EVERYTHING IS FREE, AND OPEN SOURCE
-No in-app purchases, no subscriptions, no ads, no locked features. Every feature listed above is free. The complete source code is public, so anyone can verify the privacy claims on this page: github.com/llassan/voice_scribe
+EVERY FEATURE IS FREE, AND OPEN SOURCE
+No in-app purchases, no subscriptions, no locked features, no minute limits. Every feature listed above is free, for everyone. One banner ad on the recordings list is what pays for that — it is non-personalised, the app never asks for your advertising ID, and it has no access to your recordings or transcripts. The complete source code is public, so anyone can verify the privacy claims on this page: github.com/llassan/voice_scribe
 
 PERFECT FOR
 • Students recording lectures and turning them into study notes
@@ -62,7 +62,7 @@ Voice recorder, speech to text, audio to text, transcribe, meeting notes, lectur
 
 - Category: **Tools** (alt: Productivity)
 - Tags: voice recorder, speech to text, transcription, audio to text, meeting notes
-- Free, no ads, no in-app purchases, open source (MIT)
+- Free, ad-supported (one banner), no in-app purchases, open source (MIT)
 
 ## Contact / links
 
@@ -73,10 +73,32 @@ Voice recorder, speech to text, audio to text, transcribe, meeting notes, lectur
 
 ## Monetization
 
-**None.** The app is free and open source (MIT) with no in-app purchases and no
-ads. Nothing to configure under Monetize with Play, and no merchant account
-needed. NOTE: because there are no purchases, the content-rating questionnaire
-answer for "purchase digital goods" must be **No**.
+**Ads only** (since 1.6.0). One AdMob banner on the recordings list; no in-app
+purchases, no subscriptions, no merchant account, nothing to configure under
+Monetize with Play.
+
+- AdMob app ID: `ca-app-pub-6304066557307214~7267432027`
+- Banner unit "Home list banner": `ca-app-pub-6304066557307214/8388942006`
+- Non-personalised only — all four advertising-ID permissions are stripped in
+  `AndroidManifest.xml` with `tools:node="remove"`.
+
+Play Console answers that MUST change when the ads build ships:
+
+| Where | Was | Must become |
+|---|---|---|
+| App content → Ads | No ads | **Contains ads** |
+| Content rating questionnaire | no ads | re-answer, declare ads |
+| Data safety | collects nothing | device IDs / approximate location / app activity, per AdMob's own disclosure guidance |
+| Store listing full description | "no ads" | the new text above |
+| Privacy policy | "no advertising SDKs" | redeploy `store/privacy-policy.html` FIRST |
+
+Still **No** for "purchase digital goods" — there are no purchases.
+
+⚠ `app-ads.txt` must be served at the root of whatever domain the listing names
+as the developer website, containing:
+`google.com, pub-6304066557307214, DIRECT, f08c47fec0942fa0`
+As of 2026-11-21 `llassan.com/app-ads.txt` returns the SPA homepage, not a text
+file, so AdMob verification FAILS and the app is capped at limited ad serving.
 
 ## Data safety form answers
 
