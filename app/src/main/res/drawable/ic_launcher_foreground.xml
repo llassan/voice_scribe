@@ -1,13 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Adaptive-icon foreground: microphone plus waveform bars, matching
+  store/icon-512.png.
+
+  Everything here sits inside the 66-unit safe-zone circle centred on
+  (54,54) — content outside that is cropped by round and squircle masks.
+  That is why this is a redraw rather than a copy of the 512px store icon:
+  that one's outermost bar and the two rules under the mic fall outside the
+  crop entirely. The previous version of this file used the stock 24dp
+  Material mic glyph at its native size, which came out 14 units wide — a
+  fifth of the safe zone — and read as a speck on the home screen.
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- microphone glyph centered in the adaptive-icon safe zone -->
-    <group android:translateX="42" android:translateY="40">
-        <path
-            android:fillColor="#FFFFFF"
-            android:pathData="M12,17c1.66,0 3,-1.34 3,-3V6c0,-1.66 -1.34,-3 -3,-3S9,4.34 9,6v8c0,1.66 1.34,3 3,3zM17,14c0,2.76 -2.24,5 -5,5s-5,-2.24 -5,-5H5c0,3.53 2.61,6.43 6,6.92V24h2v-3.08c3.39,-0.49 6,-3.39 6,-6.92h-2z"
-            android:strokeWidth="0" />
-    </group>
+
+    <!-- waveform bars, outer pair shortest -->
+    <path
+        android:fillColor="#7FD1C8"
+        android:pathData="M22.5,50.5 A1.5,1.5 0 0 1 25.5,50.5 L25.5,57.5 A1.5,1.5 0 0 1 22.5,57.5 Z" />
+    <path
+        android:fillColor="#7FD1C8"
+        android:pathData="M28.5,45.5 A1.5,1.5 0 0 1 31.5,45.5 L31.5,62.5 A1.5,1.5 0 0 1 28.5,62.5 Z" />
+    <path
+        android:fillColor="#7FD1C8"
+        android:pathData="M34.5,49 A1.5,1.5 0 0 1 37.5,49 L37.5,59 A1.5,1.5 0 0 1 34.5,59 Z" />
+    <path
+        android:fillColor="#7FD1C8"
+        android:pathData="M70.5,49 A1.5,1.5 0 0 1 73.5,49 L73.5,59 A1.5,1.5 0 0 1 70.5,59 Z" />
+    <path
+        android:fillColor="#7FD1C8"
+        android:pathData="M76.5,45.5 A1.5,1.5 0 0 1 79.5,45.5 L79.5,62.5 A1.5,1.5 0 0 1 76.5,62.5 Z" />
+    <path
+        android:fillColor="#7FD1C8"
+        android:pathData="M82.5,50.5 A1.5,1.5 0 0 1 85.5,50.5 L85.5,57.5 A1.5,1.5 0 0 1 82.5,57.5 Z" />
+
+    <!-- capsule -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M46.5,42 A7.5,7.5 0 0 1 61.5,42 L61.5,50 A7.5,7.5 0 0 1 46.5,50 Z" />
+    <!-- cradle: lower half of a circle, so sweep-flag 0 -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="4.5"
+        android:strokeLineCap="round"
+        android:pathData="M41,51.5 A13,13 0 0 0 67,51.5" />
+    <!-- stem -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M52.5,63 A1.5,1.5 0 0 1 55.5,63 L55.5,68 A1.5,1.5 0 0 1 52.5,68 Z" />
+    <!-- base -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M46,69.5 L62,69.5 A2,2 0 0 1 62,73.5 L46,73.5 A2,2 0 0 1 46,69.5 Z" />
 </vector>
