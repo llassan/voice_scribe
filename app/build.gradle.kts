@@ -35,8 +35,8 @@ android {
         applicationId = "com.vikash.voicescribe"
         minSdk = 26
         targetSdk = 36
-        versionCode = 11
-        versionName = "1.6.0"
+        versionCode = 12
+        versionName = "1.6.1"
         vectorDrawables { useSupportLibrary = true }
         // Debug and any unsigned build get test ads; only release reads ads.properties.
         manifestPlaceholders["admobAppId"] = testAdmobAppId
