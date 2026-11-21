@@ -1,6 +1,7 @@
 package com.vikash.voicescribe
 
 import android.app.Application
+import com.vikash.voicescribe.ads.Ads
 import com.vikash.voicescribe.data.RecordingStore
 import com.vikash.voicescribe.model.AppSettings
 import com.vikash.voicescribe.model.LanguagePrefs
@@ -31,5 +32,6 @@ class App : Application() {
         languages = LanguagePrefs(this)
         settings = AppSettings(this)
         engine = TranscriptionEngine(this, store, models, languages, settings, appScope)
+        Ads.init(this)
     }
 }

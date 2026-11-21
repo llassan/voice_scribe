@@ -5,6 +5,19 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+// Real AdMob ids live in ads.properties at the repo root (gitignored):
+//   admobAppId=ca-app-pub-XXXXXXXX~YYYYYYYY
+//   admobBannerUnitId=ca-app-pub-XXXXXXXX/ZZZZZZZZ
+// Without that file every build uses Google's public test ids, which never earn
+// a cent and never risk the account. See ads.properties.example.
+val adsProps = Properties().apply {
+    val f = rootProject.file("ads.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
+}
+// Google's documented test ids, safe to click and safe to ship by accident.
+val testAdmobAppId = "ca-app-pub-3940256099942544~3347511713"
+val testBannerUnitId = "ca-app-pub-3940256099942544/9214589741"
+
 // Upload-key credentials from keystore.properties at the repo root (gitignored).
 // See keystore.properties.example for the expected schema.
 val keystorePropsFile = rootProject.file("keystore.properties")
@@ -22,9 +35,12 @@ android {
         applicationId = "com.vikash.voicescribe"
         minSdk = 26
         targetSdk = 36
-        versionCode = 8
-        versionName = "1.5.0"
+        versionCode = 11
+        versionName = "1.6.0"
         vectorDrawables { useSupportLibrary = true }
+        // Debug and any unsigned build get test ads; only release reads ads.properties.
+        manifestPlaceholders["admobAppId"] = testAdmobAppId
+        buildConfigField("String", "ADMOB_BANNER_UNIT_ID", "\"$testBannerUnitId\"")
     }
 
     signingConfigs {
@@ -42,6 +58,13 @@ android {
 
     buildTypes {
         release {
+            manifestPlaceholders["admobAppId"] =
+                adsProps.getProperty("admobAppId") ?: testAdmobAppId
+            buildConfigField(
+                "String",
+                "ADMOB_BANNER_UNIT_ID",
+                "\"${adsProps.getProperty("admobBannerUnitId") ?: testBannerUnitId}\"",
+            )
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
@@ -60,7 +83,10 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    buildFeatures { compose = true }
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
 }
 
 dependencies {
@@ -79,4 +105,6 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.material.icons)
     implementation(libs.androidx.navigation.compose)
+
+    implementation(libs.play.services.ads)
 }

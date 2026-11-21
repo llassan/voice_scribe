@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import com.vikash.voicescribe.ads.BannerAd
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -44,6 +45,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -148,13 +150,22 @@ fun HomeScreen(
             )
         },
         bottomBar = {
-            RecordBar(
-                isRecording = session != null,
-                elapsedMs = session?.elapsedMs ?: 0L,
-                amplitude = session?.amplitude ?: 0f,
-                onStart = { startRecording() },
-                onStop = { RecorderService.stop(context) },
-            )
+            Column {
+                // The banner sits above the record bar, fenced off by a divider and
+                // a gap. The record button is the one control people stab at in a
+                // hurry, so the ad needs visible separation from it — an accidental
+                // click is both a bad experience and an AdMob policy problem.
+                BannerAd()
+                Spacer(Modifier.height(8.dp))
+                HorizontalDivider()
+                RecordBar(
+                    isRecording = session != null,
+                    elapsedMs = session?.elapsedMs ?: 0L,
+                    amplitude = session?.amplitude ?: 0f,
+                    onStart = { startRecording() },
+                    onStop = { RecorderService.stop(context) },
+                )
+            }
         }
     ) { padding ->
         Column(Modifier.padding(padding).fillMaxSize()) {
